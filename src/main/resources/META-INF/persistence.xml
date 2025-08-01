@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="https://jakarta.ee/xml/ns/persistence"
+             version="3.0">
+
+    <persistence-unit name="studentPU" transaction-type="RESOURCE_LOCAL">
+        <!-- ⬇️ Fournisseur JPA -->
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+
+        <!-- ⬇️ Entités -->
+        <class>fr.eliess.model.Student</class>
+
+        <properties>
+            <!-- Connexion DB -->
+            <property name="jakarta.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/jpaexo?useSSL=false&amp;serverTimezone=UTC"/>
+            <property name="jakarta.persistence.jdbc.user" value="eliess"/>
+            <property name="jakarta.persistence.jdbc.password" value="Eliess2001#@!"/>
+            <property name="jakarta.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
+
+            <!-- Hibernate -->
+            <property name="hibernate.dialect" value="org.hibernate.dialect.MySQL8Dialect"/>
+            <property name="hibernate.hbm2ddl.auto" value="update"/>
+            <property name="hibernate.show_sql" value="true"/>
+        </properties>
+    </persistence-unit>
+
+</persistence>

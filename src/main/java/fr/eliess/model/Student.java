@@ -1,19 +1,16 @@
 package fr.eliess.model;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Set;
 
 @Entity
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
 @ToString(exclude = "courses")
 public class Student {
 
@@ -24,7 +21,7 @@ public class Student {
     private String name;
     private int age;
 
-    @ManyToMany
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}) // <- cascade activé
     @JoinTable(
             name = "student_course",
             joinColumns = @JoinColumn(name = "student_id"),
@@ -44,11 +41,11 @@ public class Student {
         this.name = name;
         this.age = age;
     }
-
+/*
     public void addCourse(Course course) {
         if (courses.add(course)) {
             course.getStudents().add(this);
         }
     }
-
+*/
 }

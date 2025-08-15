@@ -1,20 +1,18 @@
 package fr.eliess.model;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Set;
 
 @Entity
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = "students") /* génère automatiquement une méthode toString() pour la classe
+@AllArgsConstructor
+@ToString(exclude = "students")
+/* génère automatiquement une méthode toString() pour la classe
 exclude = "students" : n'inclut pas les champs students dans le toString()
 pour éviter les boucles infinies dans les relations bidirectionnelles (Student <--> Course)
 */
@@ -34,10 +32,11 @@ public class Course {
         this.title = title;
     }
 
+    /*
     public void addStudent(Student student) {
         if (students.add(student)) {
             student.getCourses().add(this);
         }
     }
-
+*/
 }

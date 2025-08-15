@@ -59,11 +59,15 @@ public class Main {
             em.persist(math);
             em.persist(physics);
 
-            // lier les étudiants aux cours
+            // lier les étudiants aux cours (MAJ manuelle des 2 côtés
+            alice.getCourses().add(math);
+            math.getStudents().add(alice);
 
-            alice.addCourse(math);
-            alice.addCourse(physics);
-            bob.addCourse(math);
+            alice.getCourses().add(physics);
+            physics.getStudents().add(alice);
+
+            bob.getCourses().add(math);
+            math.getStudents().add(bob);
 
             em.getTransaction().commit();
 
@@ -113,6 +117,28 @@ public class Main {
     .reduce((a, b) -> a + ", " + b) -> concatène tous les titres séparés par des virgules.
     .orElse("") -> si l’étudiant n’a aucun cours, renvoie une chaîne vide.
     System.out.println -> affiche la liste des titres.
+
+    ================================================================
+
+    Après modifications (ajout des cascades et suppression des méthodes addCourse() et addStudent()) :
+
+    alice.getCourses().add(math);
+    math.getStudents().add(alice);
+
+    On met les 2 côtés de la relation à jour en mémoire
+    Hibernate va détecter qu'on a modifié la relation
+    et va générer les bonnes lignes dans la table de jointure student_course lors du commit().
+    Même si on avait utilisé tes méthodes addCourse / addStudent,
+    le résultat final dans la base de données aurait été identique.
+    La différence est surtout dans la clarté et la sécurité du code.
+
+    Résumé des modifications :
+
+    Les constructeurs personnalisés simplifient la création d’objets et rendent le code plus lisible.
+    JPA/Hibernate utilise toujours le constructeur sans argument
+    pour instancier les entités depuis la base.
+    Les changements côté code ne changent pas le comportement final si la logique métier
+    et les relations sont respectées.
 
     */
 }

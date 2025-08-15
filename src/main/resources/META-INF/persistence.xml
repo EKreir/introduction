@@ -10,7 +10,7 @@
         <class>fr.eliess.model.Student</class>
 
         <properties>
-            <!-- Connexion DB -->
+            <!-- Connexion DB MySQL -->
             <property name="jakarta.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/jpaexo?useSSL=false&amp;serverTimezone=UTC"/>
             <property name="jakarta.persistence.jdbc.user" value="eliess"/>
             <property name="jakarta.persistence.jdbc.password" value="Eliess2001#@!"/>

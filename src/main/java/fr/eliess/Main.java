@@ -3,6 +3,8 @@ package fr.eliess;
 import com.mysql.cj.jdbc.Driver;
 import fr.eliess.basics.GestionEleves;
 import fr.eliess.dao.ConnexionBDD;
+import fr.eliess.dao.CourseDAO;
+import fr.eliess.dao.StudentDAO;
 import fr.eliess.model.Course;
 import fr.eliess.model.Student;
 import jakarta.persistence.EntityManager;
@@ -43,23 +45,26 @@ public class Main {
         EntityManagerFactory emf = Persistence.createEntityManagerFactory("studentPU");
         EntityManager em = emf.createEntityManager();
 
+        // ===== Instantiation des DAO =====
+        StudentDAO studentDAO = new StudentDAO(em);
+        CourseDAO courseDAO = new CourseDAO(em);
+
         try {
 
-            logger.info("🔄Démarrage de la transaction");
-            em.getTransaction().begin();
-
+            // Création de quelques étudiants et cours
             Student alice = new Student("Rayan", 18);
             Student bob = new Student("Fahd", 24);
 
             Course math = new Course("Espagnol");
             Course physics = new Course("Technologie");
 
-            em.persist(alice);
-            em.persist(bob);
-            em.persist(math);
-            em.persist(physics);
+            // Persistance via DAO
+            studentDAO.create(alice);
+            studentDAO.create(bob);
+            courseDAO.create(math);
+            courseDAO.create(physics);
 
-            // lier les étudiants aux cours (MAJ manuelle des 2 côtés
+            // Lier les étudiants aux cours
             alice.getCourses().add(math);
             math.getStudents().add(alice);
 
@@ -69,21 +74,23 @@ public class Main {
             bob.getCourses().add(math);
             math.getStudents().add(bob);
 
-            em.getTransaction().commit();
+            // MAJ des entités après les liaisons
+            studentDAO.update(alice);
+            studentDAO.update(bob);
 
-            logger.info("Étudiant persisté avec succès");
+            logger.info("Étudiants et cours persistés avec succès via DAO");
 
+            // Lecture avec requête (toujours possible !)
             List<Student> students = em.createQuery(
                     "SELECT DISTINCT s FROM Student s LEFT JOIN FETCH s.courses", Student.class
             ).getResultList();
 
-            // Affichage clair des étudiants et de leurs cours
+            // Affichage clair
             for (Student s : students) {
                 System.out.print(s.getName() + " suit les cours : ");
                 if (s.getCourses().isEmpty()) {
                     System.out.println("aucun cours");
                 } else {
-                    // On récupère juste les titres des cours
                     String courseTitles = s.getCourses().stream()
                             .map(Course::getTitle)
                             .reduce((a, b) -> a + ", " + b)
@@ -139,6 +146,10 @@ public class Main {
     pour instancier les entités depuis la base.
     Les changements côté code ne changent pas le comportement final si la logique métier
     et les relations sont respectées.
+
+    ================================================================
+
+
 
     */
 }

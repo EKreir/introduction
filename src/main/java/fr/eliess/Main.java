@@ -112,6 +112,7 @@ public class Main {
         }
     }
 
+
     /*
     Requête avec LEFT JOIN FETCH :
     SELECT DISTINCT s -> récupère chaque Student une seule fois.

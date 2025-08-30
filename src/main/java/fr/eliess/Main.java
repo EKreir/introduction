@@ -24,7 +24,7 @@ public class Main {
 
     public static void main(String[] args) {
 
-        // Code précédent temporairement désactivé
+        // Code précédent temporairement désactivé de la connexion à MySQL sans JPA / Hibernate
         /*
         System.out.println("Bienvenue dans le projet Maven!");
         System.out.println("Driver MySQL : " + Driver.class.getName());
@@ -81,9 +81,7 @@ public class Main {
             logger.info("Étudiants et cours persistés avec succès via DAO");
 
             // Lecture avec requête (toujours possible !)
-            List<Student> students = em.createQuery(
-                    "SELECT DISTINCT s FROM Student s LEFT JOIN FETCH s.courses", Student.class
-            ).getResultList();
+            List<Student> students = studentDAO.findAllWithCourses();
 
             // Affichage clair
             for (Student s : students) {
@@ -98,6 +96,16 @@ public class Main {
                     System.out.println(courseTitles);
                 }
             }
+
+            logger.info("📌 Étudiants inscrits en Espagnol :");
+            studentDAO.findByCourseTitle("Espagnol")
+                    .forEach(s -> System.out.println(" - " + s.getName()));
+
+            logger.info("📌 Page 1 (taille 2) des étudiants :");
+            studentDAO.findAllPaged(1, 2)
+                    .forEach(s -> System.out.println(" - " + s.getName()));
+
+            logger.info("📌 Nombre total d’étudiants = {}", studentDAO.countStudent());
 
         } catch (Exception e) {
 

@@ -37,9 +37,9 @@ public class Student {
     private Set<Course> courses = new HashSet<>();
     // initialise la collection pour éviter les NullPointerException
 
-
-    @Embedded
-    private StudentProfile profile = new StudentProfile();
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "profile_id", unique = true)
+    private StudentProfile profile;
 
     public Student(String name, int age) {
         this.name = name;

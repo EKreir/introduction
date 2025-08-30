@@ -57,16 +57,16 @@ public class Main {
         try {
             em.getTransaction().begin();
 
-            // === Création des profils étudiants ===
+            // === Création des étudiants et profils ===
             StudentProfile profileAlice = new StudentProfile("123 Rue Principale", "0601020304");
-            StudentProfile profileBob = new StudentProfile("456 Avenue Centrale", "0605060708");
-
-            // === Création des étudiants ===
             Student alice = new Student("Rayan", 18);
             alice.setProfile(profileAlice);
+            profileAlice.setStudent(alice); // liaison bidirectionnelle
 
+            StudentProfile profileBob = new StudentProfile("456 Avenue Centrale", "0605060708");
             Student bob = new Student("Fahd", 24);
             bob.setProfile(profileBob);
+            profileBob.setStudent(bob); // liaison bidirectionnelle
 
             // === Création des cours ===
             Course math = new Course("Espagnol");
@@ -76,9 +76,7 @@ public class Main {
             Teacher mrSmith = new Teacher("Mr. Smith");
             mrSmith.addCourse(math);
             mrSmith.addCourse(physics);
-
-            // Persistance du professeur et des cours (cascade)
-            teacherDAO.create(mrSmith);
+            teacherDAO.create(mrSmith); // persistance cascade vers les cours
 
             // === Lier étudiants aux cours ===
             alice.getCourses().add(math);
@@ -90,12 +88,12 @@ public class Main {
             bob.getCourses().add(math);
             math.getStudents().add(bob);
 
-            // Persistance des étudiants (profile inclus via @Embedded)
+            // Persistance des étudiants avec profils
             studentDAO.create(alice);
             studentDAO.create(bob);
 
-            // Flush pour synchroniser la DB et éviter les NPE
-            em.flush();
+            em.getTransaction().commit();
+            logger.info("💾 Étudiants, profils, cours et professeur persistés avec succès");
 
             // === Affichage des étudiants avec profils et cours ===
             List<Student> students = studentDAO.findAllWithCourses();
@@ -119,10 +117,6 @@ public class Main {
                     .reduce((a, b) -> a + ", " + b)
                     .orElse("aucun cours");
             System.out.println("Enseigne les cours : " + teacherCourses);
-
-            em.getTransaction().commit();
-
-            logger.info("💾 Étudiants, profils, cours et professeur persistés avec succès");
 
         } catch (Exception e) {
             logger.error("Une erreur est survenue", e);

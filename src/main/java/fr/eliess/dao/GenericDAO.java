@@ -14,9 +14,7 @@ public abstract class GenericDAO<T> {
 
     public void create(T entity) {
 
-        em.getTransaction().begin();
         em.persist(entity);
-        em.getTransaction().commit();
 
     }
 
@@ -28,17 +26,13 @@ public abstract class GenericDAO<T> {
 
     public void update(T entity) {
 
-        em.getTransaction().begin();
         em.merge(entity);
-        em.getTransaction().commit();
 
     }
 
     public void delete(T entity) {
 
-        em.getTransaction().begin();
         em.remove(em.contains(entity) ? entity : em.merge(entity));
-        em.getTransaction().commit();
 
     }
 

@@ -37,6 +37,10 @@ public class Student {
     private Set<Course> courses = new HashSet<>();
     // initialise la collection pour éviter les NullPointerException
 
+
+    @Embedded
+    private StudentProfile profile = new StudentProfile();
+
     public Student(String name, int age) {
         this.name = name;
         this.age = age;

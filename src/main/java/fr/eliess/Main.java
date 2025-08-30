@@ -8,6 +8,7 @@ import fr.eliess.dao.StudentDAO;
 import fr.eliess.dao.TeacherDAO;
 import fr.eliess.model.Course;
 import fr.eliess.model.Student;
+import fr.eliess.model.StudentProfile;
 import fr.eliess.model.Teacher;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
@@ -42,21 +43,30 @@ public class Main {
         */
 
         // === TEST HIBERNATE / JPA ===
-        logger.info("🔧 Chargement du fichier persistence.xml : {}", Main.class.getClassLoader().getResource("META-INF/persistence.xml"));
+        logger.info("🔧 Chargement du fichier persistence.xml : {}",
+                Main.class.getClassLoader().getResource("META-INF/persistence.xml"));
 
         EntityManagerFactory emf = Persistence.createEntityManagerFactory("studentPU");
         EntityManager em = emf.createEntityManager();
 
-        // ===== Instantiation des DAO =====
+        // Instanciation des DAO
         StudentDAO studentDAO = new StudentDAO(em);
         CourseDAO courseDAO = new CourseDAO(em);
         TeacherDAO teacherDAO = new TeacherDAO(em);
 
         try {
+            em.getTransaction().begin();
+
+            // === Création des profils étudiants ===
+            StudentProfile profileAlice = new StudentProfile("123 Rue Principale", "0601020304");
+            StudentProfile profileBob = new StudentProfile("456 Avenue Centrale", "0605060708");
 
             // === Création des étudiants ===
             Student alice = new Student("Rayan", 18);
+            alice.setProfile(profileAlice);
+
             Student bob = new Student("Fahd", 24);
+            bob.setProfile(profileBob);
 
             // === Création des cours ===
             Course math = new Course("Espagnol");
@@ -67,7 +77,7 @@ public class Main {
             mrSmith.addCourse(math);
             mrSmith.addCourse(physics);
 
-            // Persistance du professeur (les cours sont persistés automatiquement grâce au cascade)
+            // Persistance du professeur et des cours (cascade)
             teacherDAO.create(mrSmith);
 
             // === Lier étudiants aux cours ===
@@ -80,16 +90,20 @@ public class Main {
             bob.getCourses().add(math);
             math.getStudents().add(bob);
 
-            // Persistance des étudiants
+            // Persistance des étudiants (profile inclus via @Embedded)
             studentDAO.create(alice);
             studentDAO.create(bob);
 
-            logger.info("💾 Étudiants, cours et professeur persistés avec succès");
+            // Flush pour synchroniser la DB et éviter les NPE
+            em.flush();
 
-            // === Affichage des étudiants et leurs cours ===
+            // === Affichage des étudiants avec profils et cours ===
             List<Student> students = studentDAO.findAllWithCourses();
             for (Student s : students) {
-                System.out.print(s.getName() + " suit les cours : ");
+                String profileInfo = (s.getProfile() != null)
+                        ? s.getProfile().getAddress() + ", " + s.getProfile().getPhone()
+                        : "aucun profil";
+                System.out.print(s.getName() + " (Profil: " + profileInfo + ") suit les cours : ");
                 String courseTitles = s.getCourses().stream()
                         .map(Course::getTitle)
                         .reduce((a, b) -> a + ", " + b)
@@ -105,6 +119,10 @@ public class Main {
                     .reduce((a, b) -> a + ", " + b)
                     .orElse("aucun cours");
             System.out.println("Enseigne les cours : " + teacherCourses);
+
+            em.getTransaction().commit();
+
+            logger.info("💾 Étudiants, profils, cours et professeur persistés avec succès");
 
         } catch (Exception e) {
             logger.error("Une erreur est survenue", e);

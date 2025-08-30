@@ -5,8 +5,10 @@ import fr.eliess.basics.GestionEleves;
 import fr.eliess.dao.ConnexionBDD;
 import fr.eliess.dao.CourseDAO;
 import fr.eliess.dao.StudentDAO;
+import fr.eliess.dao.TeacherDAO;
 import fr.eliess.model.Course;
 import fr.eliess.model.Student;
+import fr.eliess.model.Teacher;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
@@ -48,23 +50,27 @@ public class Main {
         // ===== Instantiation des DAO =====
         StudentDAO studentDAO = new StudentDAO(em);
         CourseDAO courseDAO = new CourseDAO(em);
+        TeacherDAO teacherDAO = new TeacherDAO(em);
 
         try {
 
-            // Création de quelques étudiants et cours
+            // === Création des étudiants ===
             Student alice = new Student("Rayan", 18);
             Student bob = new Student("Fahd", 24);
 
+            // === Création des cours ===
             Course math = new Course("Espagnol");
             Course physics = new Course("Technologie");
 
-            // Persistance via DAO
-            studentDAO.create(alice);
-            studentDAO.create(bob);
-            courseDAO.create(math);
-            courseDAO.create(physics);
+            // === Création du professeur et association aux cours ===
+            Teacher mrSmith = new Teacher("Mr. Smith");
+            mrSmith.addCourse(math);
+            mrSmith.addCourse(physics);
 
-            // Lier les étudiants aux cours
+            // Persistance du professeur (les cours sont persistés automatiquement grâce au cascade)
+            teacherDAO.create(mrSmith);
+
+            // === Lier étudiants aux cours ===
             alice.getCourses().add(math);
             math.getStudents().add(alice);
 
@@ -74,49 +80,39 @@ public class Main {
             bob.getCourses().add(math);
             math.getStudents().add(bob);
 
-            // MAJ des entités après les liaisons
-            studentDAO.update(alice);
-            studentDAO.update(bob);
+            // Persistance des étudiants
+            studentDAO.create(alice);
+            studentDAO.create(bob);
 
-            logger.info("Étudiants et cours persistés avec succès via DAO");
+            logger.info("💾 Étudiants, cours et professeur persistés avec succès");
 
-            // Lecture avec requête (toujours possible !)
+            // === Affichage des étudiants et leurs cours ===
             List<Student> students = studentDAO.findAllWithCourses();
-
-            // Affichage clair
             for (Student s : students) {
                 System.out.print(s.getName() + " suit les cours : ");
-                if (s.getCourses().isEmpty()) {
-                    System.out.println("aucun cours");
-                } else {
-                    String courseTitles = s.getCourses().stream()
-                            .map(Course::getTitle)
-                            .reduce((a, b) -> a + ", " + b)
-                            .orElse("");
-                    System.out.println(courseTitles);
-                }
+                String courseTitles = s.getCourses().stream()
+                        .map(Course::getTitle)
+                        .reduce((a, b) -> a + ", " + b)
+                        .orElse("aucun cours");
+                System.out.println(courseTitles);
             }
 
-            logger.info("📌 Étudiants inscrits en Espagnol :");
-            studentDAO.findByCourseTitle("Espagnol")
-                    .forEach(s -> System.out.println(" - " + s.getName()));
-
-            logger.info("📌 Page 1 (taille 2) des étudiants :");
-            studentDAO.findAllPaged(1, 2)
-                    .forEach(s -> System.out.println(" - " + s.getName()));
-
-            logger.info("📌 Nombre total d’étudiants = {}", studentDAO.countStudent());
+            // === Affichage du professeur et ses cours ===
+            Teacher teacherFromDb = teacherDAO.findWithCourses(mrSmith.getId());
+            System.out.println("\nProfesseur : " + teacherFromDb.getName());
+            String teacherCourses = teacherFromDb.getCourses().stream()
+                    .map(Course::getTitle)
+                    .reduce((a, b) -> a + ", " + b)
+                    .orElse("aucun cours");
+            System.out.println("Enseigne les cours : " + teacherCourses);
 
         } catch (Exception e) {
-
             logger.error("Une erreur est survenue", e);
-            e.printStackTrace();
             if (em.getTransaction().isActive()) em.getTransaction().rollback();
-
         } finally {
             em.close();
             emf.close();
-            logger.info("🧹Ressources EntityManager fermées");
+            logger.info("🧹 Ressources EntityManager fermées");
         }
     }
 

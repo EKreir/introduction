@@ -28,6 +28,10 @@ public class Course {
     private Set<Student> students = new HashSet<>();
     // Ici, Student a courses et Course a students. Le champ students dans Course est le propriétaire de la relation.
 
+    @ManyToOne
+    @JoinColumn(name = "teacher_id") // foreign key DB
+    private Teacher teacher;
+
     public Course(String title) {
         this.title = title;
     }

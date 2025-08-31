@@ -24,11 +24,11 @@ public class Course {
 
     private String title;
 
-    @ManyToMany(mappedBy = "courses") // indique que l'autre côté de la relation possède la vraie clé étrangère
+    @ManyToMany(mappedBy = "courses", fetch = FetchType.LAZY) // indique que l'autre côté de la relation possède la vraie clé étrangère
     private Set<Student> students = new HashSet<>();
     // Ici, Student a courses et Course a students. Le champ students dans Course est le propriétaire de la relation.
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "teacher_id") // foreign key DB
     private Teacher teacher;
 
@@ -36,11 +36,11 @@ public class Course {
         this.title = title;
     }
 
-    /*
+
     public void addStudent(Student student) {
         if (students.add(student)) {
             student.getCourses().add(this);
         }
     }
-*/
+
 }

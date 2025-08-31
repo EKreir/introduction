@@ -1,8 +1,5 @@
 package fr.eliess;
 
-import com.mysql.cj.jdbc.Driver;
-import fr.eliess.basics.GestionEleves;
-import fr.eliess.dao.ConnexionBDD;
 import fr.eliess.dao.CourseDAO;
 import fr.eliess.dao.StudentDAO;
 import fr.eliess.dao.TeacherDAO;
@@ -16,14 +13,12 @@ import jakarta.persistence.Persistence;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Main {
 
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
-
 
     public static void main(String[] args) {
 
@@ -42,91 +37,112 @@ public class Main {
         }
         */
 
-        // === TEST HIBERNATE / JPA ===
         logger.info("🔧 Chargement du fichier persistence.xml : {}",
                 Main.class.getClassLoader().getResource("META-INF/persistence.xml"));
 
         EntityManagerFactory emf = Persistence.createEntityManagerFactory("studentPU");
         EntityManager em = emf.createEntityManager();
 
-        // Instanciation des DAO
         StudentDAO studentDAO = new StudentDAO(em);
         CourseDAO courseDAO = new CourseDAO(em);
         TeacherDAO teacherDAO = new TeacherDAO(em);
 
+        var tx = em.getTransaction();
+
         try {
-            em.getTransaction().begin();
+            tx.begin(); // Une seule transaction pour tout
 
-            // === Création des étudiants et profils ===
-            StudentProfile profileAlice = new StudentProfile("123 Rue Principale", "0601020304");
-            Student alice = new Student("Rayan", 18);
-            alice.setProfile(profileAlice);
-            profileAlice.setStudent(alice); // liaison bidirectionnelle
+            // =========================
+            // 1️⃣ Création des profils et étudiants
+            // =========================
+            StudentProfile profileRayan = new StudentProfile("123 Rue Principale", "0601020304");
+            StudentProfile profileFahd = new StudentProfile("456 Avenue Centrale", "0605060708");
 
-            StudentProfile profileBob = new StudentProfile("456 Avenue Centrale", "0605060708");
-            Student bob = new Student("Fahd", 24);
-            bob.setProfile(profileBob);
-            profileBob.setStudent(bob); // liaison bidirectionnelle
+            Student rayan = new Student("Rayan", 18);
+            rayan.setProfile(profileRayan);
+            profileRayan.setStudent(rayan);
 
-            // === Création des cours ===
-            Course math = new Course("Espagnol");
-            Course physics = new Course("Technologie");
+            Student fahd = new Student("Fahd", 24);
+            fahd.setProfile(profileFahd);
+            profileFahd.setStudent(fahd);
 
-            // === Création du professeur et association aux cours ===
+            // =========================
+            // 2️⃣ Création des cours et du professeur
+            // =========================
+            Course maths = new Course("Maths");
+            Course physics = new Course("Physique");
+
             Teacher mrSmith = new Teacher("Mr. Smith");
-            mrSmith.addCourse(math);
+            mrSmith.addCourse(maths);
             mrSmith.addCourse(physics);
-            teacherDAO.create(mrSmith); // persistance cascade vers les cours
 
-            // === Lier étudiants aux cours ===
-            alice.getCourses().add(math);
-            math.getStudents().add(alice);
+            // =========================
+            // 3️⃣ Associations étudiants ↔ cours
+            // =========================
+            rayan.addCourse(maths);
+            rayan.addCourse(physics);
+            fahd.addCourse(physics);
 
-            alice.getCourses().add(physics);
-            physics.getStudents().add(alice);
+            // =========================
+            // 4️⃣ Persistance
+            // =========================
+            teacherDAO.create(mrSmith);
+            studentDAO.create(rayan);
+            studentDAO.create(fahd);
 
-            bob.getCourses().add(math);
-            math.getStudents().add(bob);
+            // =========================
+            // 5️⃣ Modification : profil de Rayan + ajout d'un cours
+            // =========================
+            rayan.getProfile().setAddress("999 Nouvelle Adresse");
+            rayan.getProfile().setPhone("0611223344");
 
-            // Persistance des étudiants avec profils
-            studentDAO.create(alice);
-            studentDAO.create(bob);
+            Course english = new Course("Anglais");
+            rayan.addCourse(english);
+            courseDAO.create(english);
 
-            em.getTransaction().commit();
-            logger.info("💾 Étudiants, profils, cours et professeur persistés avec succès");
+            // =========================
+            // 6️⃣ Affichage final
+            // =========================
+            displayAllStudents(studentDAO);
+            displayTeacherWithCourses(teacherDAO, mrSmith.getId());
 
-            // === Affichage des étudiants avec profils et cours ===
-            List<Student> students = studentDAO.findAllWithCourses();
-            for (Student s : students) {
-                String profileInfo = (s.getProfile() != null)
-                        ? s.getProfile().getAddress() + ", " + s.getProfile().getPhone()
-                        : "aucun profil";
-                System.out.print(s.getName() + " (Profil: " + profileInfo + ") suit les cours : ");
-                String courseTitles = s.getCourses().stream()
-                        .map(Course::getTitle)
-                        .reduce((a, b) -> a + ", " + b)
-                        .orElse("aucun cours");
-                System.out.println(courseTitles);
-            }
-
-            // === Affichage du professeur et ses cours ===
-            Teacher teacherFromDb = teacherDAO.findWithCourses(mrSmith.getId());
-            System.out.println("\nProfesseur : " + teacherFromDb.getName());
-            String teacherCourses = teacherFromDb.getCourses().stream()
-                    .map(Course::getTitle)
-                    .reduce((a, b) -> a + ", " + b)
-                    .orElse("aucun cours");
-            System.out.println("Enseigne les cours : " + teacherCourses);
+            tx.commit(); // commit unique pour tout le bloc
+            logger.info("💾 Toutes les opérations effectuées avec succès");
 
         } catch (Exception e) {
-            logger.error("Une erreur est survenue", e);
-            if (em.getTransaction().isActive()) em.getTransaction().rollback();
+            logger.error("❌ Erreur, rollback en cours", e);
+            if (tx.isActive()) tx.rollback();
         } finally {
             em.close();
             emf.close();
-            logger.info("🧹 Ressources EntityManager fermées");
+            logger.info("🧹 EntityManager fermé");
         }
     }
+
+    private static void displayAllStudents(StudentDAO studentDAO) {
+        List<Student> students = studentDAO.findAllWithCourses();
+        System.out.println("\n📚 Liste des étudiants :");
+        for (Student s : students) {
+            String profileInfo = (s.getProfile() != null)
+                    ? s.getProfile().getAddress() + " | " + s.getProfile().getPhone()
+                    : "aucun profil";
+            String courses = s.getCourses().stream()
+                    .map(Course::getTitle)
+                    .collect(Collectors.joining(", "));
+            System.out.println(s.getName() + " (Profil: " + profileInfo + ") suit : " +
+                    (courses.isEmpty() ? "aucun cours" : courses));
+        }
+    }
+
+    private static void displayTeacherWithCourses(TeacherDAO teacherDAO, Long teacherId) {
+        Teacher teacher = teacherDAO.findWithCourses(teacherId);
+        String courses = teacher.getCourses().stream()
+                .map(Course::getTitle)
+                .collect(Collectors.joining(", "));
+        System.out.println("\n👨‍🏫 Professeur : " + teacher.getName());
+        System.out.println("Enseigne : " + (courses.isEmpty() ? "aucun cours" : courses));
+    }
+}
 
     /*
     Requête avec LEFT JOIN FETCH :
@@ -165,7 +181,61 @@ public class Main {
 
     ================================================================
 
+    Points clés
+
+    Bidirectionnel One-to-One :
+    Student garde profile_id (côté propriétaire).
+    StudentProfile a mappedBy = "profile" pour naviguer vers l’étudiant.
+
+    Liaisons mises à jour avant persistance :
+    alice.setProfile(profileAlice)
+    profileAlice.setStudent(alice)
+
+    Persistance sécurisée :
+    CascadeType.ALL sur le profile permet d’insérer le StudentProfile automatiquement.
+    Évite les NullPointerException lors de l’accès à getProfile().
+
+    Affichage des profils et cours fonctionne correctement.
+
+    =======================================================================
+
+    Points importants
+
+    Une seule transaction tx.begin() … tx.commit() pour toutes les opérations.
+
+    Rollback si quelque chose échoue.
+    Les StudentProfile sont persistés automatiquement grâce à cascade = CascadeType.ALL sur la relation One-to-One.
+
+    Aucun flush() manuel nécessaire ici, Hibernate le fait au commit().
+
+    =====================================================================
+
+    On a simplifié les logs et les commentaires -> on garde juste l’essentiel.
+
+    On a ajouté profile.setStudent(student) pour bien relier les deux côtés du OneToOne.
+
+    On utilise tes méthodes utilitaires (addCourse, addCourse côté prof) plutôt que de bricoler les deux côtés à la main.
+
+    Avec ça, on devrait pouvoir voir clairement dans la console :
+
+    chaque étudiant avec son profil et ses cours,
+
+    le professeur avec ses cours.
+
+    ======================================================================
+
+    Points clés de cette version :
+
+    Une seule transaction tx.begin() -> tx.commit() pour tout : création, modification et affichage.
+
+    La persistance du nouveau cours se fait avec courseDAO.create(english)
+    et JPA/Hibernate gère la liaison avec Rayan.
+
+    Les méthodes utilitaires pour afficher étudiants et professeurs restent claires et réutilisables.
+
+    Plus besoin de récupérer Rayan depuis la DB avant de modifier son profil
+     il est déjà attaché au EntityManager car créé dans la même transaction.
+
 
 
     */
-}

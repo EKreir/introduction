@@ -2,6 +2,8 @@ package fr.eliess.dao;
 
 import jakarta.persistence.EntityManager;
 
+import java.util.List;
+
 public abstract class GenericDAO<T> {
 
     protected EntityManager em;
@@ -24,9 +26,9 @@ public abstract class GenericDAO<T> {
 
     }
 
-    public void update(T entity) {
+    public T update(T entity) {
 
-        em.merge(entity);
+        return em.merge(entity);
 
     }
 
@@ -34,6 +36,18 @@ public abstract class GenericDAO<T> {
 
         em.remove(em.contains(entity) ? entity : em.merge(entity));
 
+    }
+
+    public List<T> findAll() {
+        return em.createQuery("FROM " + entityClass.getSimpleName(), entityClass)
+                .getResultList();
+    }
+
+    public long count() {
+        return em.createQuery(
+                "SELECT COUNT(e) FROM " + entityClass.getSimpleName() + " e",
+                Long.class
+        ).getSingleResult();
     }
 
     /*

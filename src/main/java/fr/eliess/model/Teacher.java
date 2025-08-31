@@ -19,7 +19,7 @@ public class Teacher {
     private String name;
 
     // Relation 1 prof -> plusieurs cours
-    @OneToMany(mappedBy = "teacher", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "teacher", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Course> courses = new ArrayList<>();
 
     // Constructeur vide obligatoire (JPA)

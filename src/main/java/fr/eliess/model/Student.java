@@ -27,6 +27,7 @@ public class Student {
             joinColumns = @JoinColumn(name = "student_id"),
             inverseJoinColumns = @JoinColumn(name = "course_id")
     )
+    private Set<Course> courses = new HashSet<>();
     /*
     Pour les relations ManyToMany.
     Crée une table de jointure entre Student et Course.
@@ -34,10 +35,9 @@ public class Student {
     joinColumns = @JoinColumn(name = "student_id") → colonne qui pointe vers Student.
     inverseJoinColumns = @JoinColumn(name = "course_id") → colonne qui pointe vers Course.
     */
-    private Set<Course> courses = new HashSet<>();
     // initialise la collection pour éviter les NullPointerException
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JoinColumn(name = "profile_id", unique = true)
     private StudentProfile profile;
 
@@ -45,11 +45,17 @@ public class Student {
         this.name = name;
         this.age = age;
     }
-/*
+
     public void addCourse(Course course) {
         if (courses.add(course)) {
             course.getStudents().add(this);
         }
+    }
+    /*
+    public void setProfile(StudentProfile profile) {
+
+        this.profile = profile;
+
     }
 */
 }

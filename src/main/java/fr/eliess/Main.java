@@ -53,7 +53,7 @@ public class Main {
             tx.begin(); // Une seule transaction pour tout
 
             // =========================
-            // 1️⃣ Création des profils et étudiants
+            //️  Création des profils et étudiants
             // =========================
             StudentProfile profileRayan = new StudentProfile("123 Rue Principale", "0601020304");
             StudentProfile profileFahd = new StudentProfile("456 Avenue Centrale", "0605060708");
@@ -67,7 +67,7 @@ public class Main {
             profileFahd.setStudent(fahd);
 
             // =========================
-            // 2️⃣ Création des cours et du professeur
+            // Création des cours et du professeur
             // =========================
             Course maths = new Course("Maths");
             Course physics = new Course("Physique");
@@ -77,21 +77,21 @@ public class Main {
             mrSmith.addCourse(physics);
 
             // =========================
-            // 3️⃣ Associations étudiants ↔ cours
+            // Associations étudiants ↔ cours
             // =========================
             rayan.addCourse(maths);
             rayan.addCourse(physics);
             fahd.addCourse(physics);
 
             // =========================
-            // 4️⃣ Persistance
+            // Persistance
             // =========================
             teacherDAO.create(mrSmith);
             studentDAO.create(rayan);
             studentDAO.create(fahd);
 
             // =========================
-            // 5️⃣ Modification : profil de Rayan + ajout d'un cours
+            // Modification : profil de Rayan + ajout d'un cours
             // =========================
             rayan.getProfile().setAddress("999 Nouvelle Adresse");
             rayan.getProfile().setPhone("0611223344");
@@ -101,7 +101,7 @@ public class Main {
             courseDAO.create(english);
 
             // =========================
-            // 6️⃣ Affichage final
+            // Affichage final
             // =========================
             displayAllStudents(studentDAO);
             displayTeacherWithCourses(teacherDAO, mrSmith.getId());

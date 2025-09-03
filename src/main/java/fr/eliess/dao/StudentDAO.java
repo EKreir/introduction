@@ -58,6 +58,36 @@ public class StudentDAO extends GenericDAO<Student> {
         ).getResultList();
     }
 
+    // Etudiant + profil
+    public Student findWithProfile(Long id) {
+        return em.createQuery(
+                "SELECT s FROM Student s LEFT JOIN FETCH s.profile WHERE s.id = :id",
+                    Student.class
+        ).setParameter("id", id)
+                .getSingleResult();
+    }
+
+    // Etudiant + cours
+    public Student findWithCourses(Long id) {
+        return em.createQuery(
+                "SELECT DISTINCT s FROM Student s LEFT JOIN FETCH s.courses WHERE s.id = ;id",
+                Student.class
+        ).setParameter("id", id)
+                .getSingleResult();
+    }
+
+    // Etudiant + profil + cours
+    public Student findWithProfileAndCourses(Long id) {
+        return em.createQuery(
+                "SELECT DISTINCT s FROM Student s " +
+                   "LEFT JOIN FETCH s.profile " +
+                   "LEFT JOIN FETCH s.courses " +
+                   "WHERE s.id = :id",
+                   Student.class
+        ).setParameter("id", id)
+         .getSingleResult();
+    }
+
     /*
 
      Explications simples
@@ -82,6 +112,14 @@ public class StudentDAO extends GenericDAO<Student> {
     countStudents :
     -> Compte total des entités.
     Utile pour afficher page X/Y.
+
+    méthodes pour étudiants, profils et cours :
+
+    Pourquoi ?
+    Parce que findByName, findByCourseTitle, findAllPaged -> vont ramener uniquement les données de l’étudiant
+     pas ses relations (puisqu’elles sont LAZY).
+
+    Donc si on veut tout afficher directement sans LazyInitializationException -> on doit passer par ces méthodes.
 
     */
 

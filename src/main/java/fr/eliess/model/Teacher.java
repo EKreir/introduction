@@ -1,8 +1,7 @@
 package fr.eliess.model;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,6 +9,9 @@ import java.util.List;
 @Entity
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@ToString(exclude = "courses")
 public class Teacher {
 
     @Id
@@ -19,12 +21,8 @@ public class Teacher {
     private String name;
 
     // Relation 1 prof -> plusieurs cours
-    @OneToMany(mappedBy = "teacher", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "teacher", cascade = CascadeType.ALL, orphanRemoval = true , fetch = FetchType.LAZY)
     private List<Course> courses = new ArrayList<>();
-
-    // Constructeur vide obligatoire (JPA)
-    public Teacher() {
-    }
 
     public Teacher(String name) {
         this.name = name;

@@ -11,7 +11,7 @@ import java.util.Set;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString(exclude = "courses")
+@ToString(exclude = {"courses", "profile"})
 public class Student {
 
     @Id
@@ -21,13 +21,14 @@ public class Student {
     private String name;
     private int age;
 
-    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}) // <- cascade activé
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY) // <- cascade activé
     @JoinTable(
             name = "student_course",
             joinColumns = @JoinColumn(name = "student_id"),
             inverseJoinColumns = @JoinColumn(name = "course_id")
     )
     private Set<Course> courses = new HashSet<>();
+
     /*
     Pour les relations ManyToMany.
     Crée une table de jointure entre Student et Course.
@@ -35,10 +36,10 @@ public class Student {
     joinColumns = @JoinColumn(name = "student_id") → colonne qui pointe vers Student.
     inverseJoinColumns = @JoinColumn(name = "course_id") → colonne qui pointe vers Course.
     */
+
     // initialise la collection pour éviter les NullPointerException
 
-    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JoinColumn(name = "profile_id", unique = true)
+    @OneToOne(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private StudentProfile profile;
 
     public Student(String name, int age) {
@@ -51,11 +52,5 @@ public class Student {
             course.getStudents().add(this);
         }
     }
-    /*
-    public void setProfile(StudentProfile profile) {
 
-        this.profile = profile;
-
-    }
-*/
 }

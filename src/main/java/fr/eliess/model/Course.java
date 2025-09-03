@@ -11,7 +11,7 @@ import java.util.Set;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString(exclude = "students")
+@ToString(exclude = {"students", "teacher"})
 /* génère automatiquement une méthode toString() pour la classe
 exclude = "students" : n'inclut pas les champs students dans le toString()
 pour éviter les boucles infinies dans les relations bidirectionnelles (Student <--> Course)

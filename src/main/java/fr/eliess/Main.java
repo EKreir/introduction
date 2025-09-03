@@ -101,10 +101,30 @@ public class Main {
             courseDAO.create(english);
 
             // =========================
-            // Affichage final
+            // Affichage final (méthodes existantes)
             // =========================
             displayAllStudents(studentDAO);
             displayTeacherWithCourses(teacherDAO, mrSmith.getId());
+
+            // =========================
+            // Nouveaux tests (méthodes avancées)
+            // =========================
+            Student rayanFromDB = studentDAO.findWithProfileAndCourses(rayan.getId());
+            System.out.println("\n👤 Étudiant (profil + cours) : " + rayanFromDB.getName());
+            System.out.println("Profil : " + rayanFromDB.getProfile().getAddress()
+                    + " | " + rayanFromDB.getProfile().getPhone());
+            System.out.println("Cours : " + rayanFromDB.getCourses().stream()
+                    .map(Course::getTitle)
+                    .collect(Collectors.joining(", ")));
+
+            Teacher teacherFull = teacherDAO.findWithCoursesAndStudents(mrSmith.getId());
+            System.out.println("\n👨‍🏫 Professeur (cours + étudiants) : " + teacherFull.getName());
+            teacherFull.getCourses().forEach(c ->
+                    System.out.println("- " + c.getTitle() + " suivi par : " +
+                            c.getStudents().stream()
+                                    .map(Student::getName)
+                                    .collect(Collectors.joining(", ")))
+            );
 
             tx.commit(); // commit unique pour tout le bloc
             logger.info("💾 Toutes les opérations effectuées avec succès");
@@ -119,6 +139,7 @@ public class Main {
         }
     }
 
+    // === Nouveaux affichages basés sur JOIN FETCH ===
     private static void displayAllStudents(StudentDAO studentDAO) {
         List<Student> students = studentDAO.findAllWithCourses();
         System.out.println("\n📚 Liste des étudiants :");
@@ -142,7 +163,6 @@ public class Main {
         System.out.println("\n👨‍🏫 Professeur : " + teacher.getName());
         System.out.println("Enseigne : " + (courses.isEmpty() ? "aucun cours" : courses));
     }
-}
 
     /*
     Requête avec LEFT JOIN FETCH :
@@ -236,6 +256,33 @@ public class Main {
     Plus besoin de récupérer Rayan depuis la DB avant de modifier son profil
      il est déjà attaché au EntityManager car créé dans la même transaction.
 
+    ======================================================================
+
+    Par défaut :
+
+    @ManyToOne et @OneToOne → EAGER
+
+    @OneToMany et @ManyToMany → LAZY
+
+    Ça veut dire que certaines relations sont chargées tout de suite
+    (même si tu ne les utilises pas),
+    et d’autres seulement quand tu les appelles.
+
+
+    Changements faits :
+
+    Suppression des anciennes méthodes d’affichage (displayAllStudents, displayTeacherWithCourses) ->
+    remplacées par :
+    displayStudentWithProfileAndCourses → utilise studentDAO.findWithProfileAndCourses.
+    displayTeacherWithCoursesAndStudents → utilise teacherDAO.findWithCoursesAndStudents.
+
+    Tout se fait en une seule transaction pour éviter les problèmes de Lazy Loading.
+
+    On verra en console :
+    un étudiant (profil + liste des cours),
+    un professeur (cours + étudiants de chaque cours).
+
 
 
     */
+}

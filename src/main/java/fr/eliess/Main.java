@@ -106,9 +106,6 @@ public class Main {
             displayAllStudents(studentDAO);
             displayTeacherWithCourses(teacherDAO, mrSmith.getId());
 
-            // =========================
-            // Nouveaux tests (méthodes avancées)
-            // =========================
             Student rayanFromDB = studentDAO.findWithProfileAndCourses(rayan.getId());
             System.out.println("\n👤 Étudiant (profil + cours) : " + rayanFromDB.getName());
             System.out.println("Profil : " + rayanFromDB.getProfile().getAddress()
@@ -126,11 +123,51 @@ public class Main {
                                     .collect(Collectors.joining(", ")))
             );
 
+            // =========================
+            // Tests Criteria API
+            // =========================
+            System.out.println("\n===== Tests Criteria API =====");
+
+            // Étudiants avec âge > 20
+            List<Student> olderStudents = studentDAO.findByAgeGreaterThan(20);
+            System.out.println("\n👴 Étudiants âgés de plus de 20 ans :");
+            olderStudents.forEach(s ->
+                    System.out.println(s.getName() + " (" + s.getAge() + " ans)")
+            );
+
+            // Étudiants nom = "Rayan" et âge >= 18
+            List<Student> filteredStudents = studentDAO.findByDynamicCriteria("Rayan", 18);
+            System.out.println("\n🎯 Étudiants nommés 'Rayan' avec au moins 18 ans :");
+            filteredStudents.forEach(s ->
+                    System.out.println(s.getName() + " (" + s.getAge() + " ans)")
+            );
+
+            // Étudiants uniquement avec âge >= 18 (nom = null)
+            List<Student> onlyByAge = studentDAO.findByDynamicCriteria(null, 18);
+            System.out.println("\n📌 Étudiants avec au moins 18 ans (sans filtrer par nom) :");
+            onlyByAge.forEach(s ->
+                    System.out.println(s.getName() + " (" + s.getAge() + " ans)")
+            );
+
+            // Étudiants uniquement avec nom = "Fahd" (âge = null)
+            List<Student> onlyByName = studentDAO.findByDynamicCriteria("Fahd", null);
+            System.out.println("\n📌 Étudiants avec le nom 'Fahd' (sans filtrer par âge) :");
+            onlyByName.forEach(s ->
+                    System.out.println(s.getName() + " (" + s.getAge() + " ans)")
+            );
+
+            // Tous les étudiants (aucun critère)
+            List<Student> allStudentsDynamic = studentDAO.findByDynamicCriteria(null, null);
+            System.out.println("\n Tous les étudiants (aucun critère appliqué) :");
+            allStudentsDynamic.forEach(s ->
+                    System.out.println(s.getName() + " (" + s.getAge() + " ans)")
+            );
+
             tx.commit(); // commit unique pour tout le bloc
             logger.info("💾 Toutes les opérations effectuées avec succès");
 
         } catch (Exception e) {
-            logger.error("❌ Erreur, rollback en cours", e);
+            logger.error(" Erreur, rollback en cours", e);
             if (tx.isActive()) tx.rollback();
         } finally {
             em.close();
@@ -139,7 +176,7 @@ public class Main {
         }
     }
 
-    // === Nouveaux affichages basés sur JOIN FETCH ===
+    // === Affichages utilitaires ===
     private static void displayAllStudents(StudentDAO studentDAO) {
         List<Student> students = studentDAO.findAllWithCourses();
         System.out.println("\n📚 Liste des étudiants :");
@@ -282,7 +319,23 @@ public class Main {
     un étudiant (profil + liste des cours),
     un professeur (cours + étudiants de chaque cours).
 
+    ==========================================================================
 
+    Ajout de Criteria API (jakarta EE / Hibernate)
+
+    Garde tout le flux existant (création -> persistance -> affichages classiques)
+    et ajoute à la fin la section Test Criteria API
+
+    On aura dans la console la liste complète des étudiants + professeurs comme avant,
+    puis les résultats dynamiques via Criteria.
+
+    Avec ça, la console affichera :
+
+    Les étudiants > 20 ans.
+    Les étudiants nommés "Rayan" et âgés ≥ 18 ans.
+    Les étudiants avec au moins 18 ans (sans nom).
+    Les étudiants nommés Fahd (sans âge).
+    Tous les étudiants si tu passes null, null.
 
     */
 }

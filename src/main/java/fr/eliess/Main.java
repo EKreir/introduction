@@ -180,6 +180,33 @@ public class Main {
                         (courses.isEmpty() ? "aucun cours" : courses));
             }
 
+            // =========================
+            // Test Criteria API : étudiants + profil + cours
+            // =========================
+
+            List<Student> studentsProfileCourses = studentDAO.findAllWithProfileAndCoursesCriteria();
+            System.out.println("\n Liste des étudiants (Criteria API : profil + cours) :");
+            for (Student s : studentsProfileCourses) {
+                String profileInfo = (s.getProfile() != null)
+                        ? s.getProfile().getAddress() + " | " + s.getProfile().getPhone()
+                        : "aucun profil";
+                String courses = s.getCourses().stream()
+                        .map(Course::getTitle)
+                        .collect(Collectors.joining(", "));
+                System.out.println(s.getName() + " (Profil: " + profileInfo + ") suit : " +
+                        (courses.isEmpty() ? "aucun cours" : courses));
+            }
+
+            // =========================
+            // Test Criteria API dynamique : âge + cours
+            // =========================
+
+            List<Student> studentsFiltered = studentDAO.findByAgeAndCourseTitle(20, "Physique");
+            System.out.println("\n Etudiants de 20 ans ou + qui suivent 'Physique' :");
+            studentsFiltered.forEach(s ->
+                            System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)")
+                    );
+
             tx.commit(); // commit unique pour tout le bloc
             logger.info("💾 Toutes les opérations effectuées avec succès");
 

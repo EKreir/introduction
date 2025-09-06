@@ -140,6 +140,44 @@ public class StudentDAO extends GenericDAO<Student> {
         return em.createQuery(cq).getResultList();
     }
 
+    // Criteria API : récupère tous les étudiants avec profil + cours
+    public  List<Student> findAllWithProfileAndCoursesCriteria() {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Student> cq = cb.createQuery(Student.class);
+        Root<Student> student = cq.from(Student.class);
+
+        // LEFT JOIN FETCH profil(OneToOne)
+        student.fetch("profile", JoinType.LEFT);
+
+        // LEFT JOIN FETCH cours (OneToMany)
+        student.fetch("courses", JoinType.LEFT);
+
+        //SELECT DISTINCT s
+        cq.select(student).distinct(true);
+
+        return em.createQuery(cq).getResultList();
+    }
+
+    // Criteria API : étudiants avec âge minimum + cours spécifique
+    public List<Student> findByAgeAndCourseTitle(int minAge, String courseTitle) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Student> cq = cb.createQuery(Student.class);
+        Root<Student> student = cq.from(Student.class);
+
+        // jointure avec courses (ManyToMany)
+        Join<Object, Object> coursesJoin = student.join("courses", JoinType.INNER);
+
+        // Condition WHERE
+        Predicate ageCondition = cb.greaterThanOrEqualTo(student.get("age"), minAge);
+        Predicate courseCondition = cb.equal(coursesJoin.get("title"), courseTitle);
+
+        // SELECT DISTINCT s WHERE age >= minAge AND course.title = courseTitle
+        cq.select(student).distinct(true)
+                .where(cb.and(ageCondition, courseCondition));
+
+        return em.createQuery(cq).getResultList();
+    }
+
     /*
 
      Explications simples
@@ -276,6 +314,43 @@ public class StudentDAO extends GenericDAO<Student> {
 
     Résultat : en une seule requête SQL, Hibernate charge les étudiants et leurs cours.
     C’est l’équivalent de ton findAllWithCourses() mais cette fois écrit en Criteria API.
+
+    ============================================================================
+
+    Méthode findAllWithProfileAndCoursesCriteria() :
+
+    student.fetch("profile", JoinType.LEFT)
+    permet de charger directement le profil de chaque étudiant.
+
+    student.fetch("courses", JoinType.LEFT)
+    permet de charger en plus ses cours.
+
+    distinct(true) évite les doublons (parce qu’un étudiant peut avoir plusieurs cours).
+
+    ===============================================================================
+
+    Méthode findByAgeAndCourseTitle(int minAge, String courseTitle) :
+
+    Ce qu’il se passe techniquement
+
+    student.join("courses", JoinType.INNER) → jointure entre Student et Course.
+
+    ageCondition → age >= minAge.
+
+    courseCondition → course.title = 'Physique'.
+
+    cb.and(...) combine les deux conditions.
+
+    distinct(true) évite les doublons (un étudiant peut avoir plusieurs cours).
+
+    Hibernate génère une requête SQL équivalente à :
+
+    SELECT DISTINCT s.*
+    FROM student s
+    INNER JOIN student_course sc ON s.id = sc.student_id
+    INNER JOIN course c ON sc.course_id = c.id
+    WHERE s.age >= 20
+      AND c.title = 'Physique';
 
     */
 

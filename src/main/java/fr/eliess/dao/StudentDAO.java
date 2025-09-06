@@ -2,10 +2,7 @@ package fr.eliess.dao;
 
 import fr.eliess.model.Student;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -93,6 +90,8 @@ public class StudentDAO extends GenericDAO<Student> {
                 .getSingleResult();
     }
 
+
+
     // Recherche avec Criteria API : âge supérieur à une valeur
     public List<Student> findByAgeGreaterThan(int age) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
@@ -122,6 +121,21 @@ public class StudentDAO extends GenericDAO<Student> {
 
         cq.select(root).where(cb.and(predicates.toArray(new Predicate[0])));
         cq.orderBy(cb.asc(root.get("name")));
+
+        return em.createQuery(cq).getResultList();
+    }
+
+    // Récupère tous les étudiants avec leurs cours avec Criteria API
+    public List<Student> findAllWithCoursesCriteria() {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Student> cq = cb.createQuery(Student.class);
+        Root<Student> student = cq.from(Student.class);
+
+        // LEFT JOIN FETCH avec Criteria API
+        student.fetch("courses", JoinType.LEFT);
+
+        // SELECT DISTINCT s
+        cq.select(student).distinct(true);
 
         return em.createQuery(cq).getResultList();
     }
@@ -246,7 +260,22 @@ public class StudentDAO extends GenericDAO<Student> {
         WHERE s.name = 'Rayan' AND s.age >= 18
         ORDER BY s.name ASC;
 
+    ============================================================================
 
+    Méthode findAllWithCoursesCriteria() :
+
+    Ce que fait ce code :
+
+    CriteriaBuilder cb → fabriqueur de requêtes.
+    CriteriaQuery<Student> cq -> on construit une requête qui renvoie des Student.
+    Root<Student> student = cq.from(Student.class) -> table principale = Student.
+    student.fetch("courses", JoinType.LEFT) -> ajoute un LEFT JOIN FETCH
+    sur l’attribut courses.
+    cq.select(student).distinct(true) -> récupère chaque étudiant une seule fois.
+    em.createQuery(cq).getResultList() -> exécute et retourne les résultats.
+
+    Résultat : en une seule requête SQL, Hibernate charge les étudiants et leurs cours.
+    C’est l’équivalent de ton findAllWithCourses() mais cette fois écrit en Criteria API.
 
     */
 

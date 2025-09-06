@@ -163,6 +163,23 @@ public class Main {
                     System.out.println(s.getName() + " (" + s.getAge() + " ans)")
             );
 
+            // =========================
+            // Test Criteria API : étudiants + cours
+            // =========================
+
+            List<Student> studentsCriteria = studentDAO.findAllWithCoursesCriteria();
+            System.out.println("\n Liste des étudiants (Criteria API)");
+            for (Student s : studentsCriteria) {
+                String profileInfo = (s.getProfile() != null)
+                        ? s.getProfile().getAddress() + " | " + s.getProfile().getPhone()
+                        : "aucun profil";
+                String courses = s.getCourses().stream()
+                        .map(Course::getTitle)
+                        .collect(Collectors.joining(", "));
+                System.out.println(s.getName() + " (Profil: " + profileInfo + ") suit : " +
+                        (courses.isEmpty() ? "aucun cours" : courses));
+            }
+
             tx.commit(); // commit unique pour tout le bloc
             logger.info("💾 Toutes les opérations effectuées avec succès");
 
@@ -336,6 +353,23 @@ public class Main {
     Les étudiants avec au moins 18 ans (sans nom).
     Les étudiants nommés Fahd (sans âge).
     Tous les étudiants si tu passes null, null.
+
+    ============================================================================
+
+    Test Criteria API : étudiants + cours :
+
+    Ce que ça fait :
+
+    Hibernate construit une requête SQL unique pour récupérer les étudiants
+    et leurs cours.
+
+    Chaque étudiant apparaît une seule fois grâce à distinct(true).
+
+    On évite le Lazy Loading multiple et le problème N+1.
+
+    Tu peux comparer le résultat avec ton ancienne méthode JPQL findAllWithCourses() :
+    le résultat sera identique,
+    mais la requête est construite dynamiquement.
 
     */
 }

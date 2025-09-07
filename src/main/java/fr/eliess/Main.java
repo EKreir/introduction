@@ -207,6 +207,61 @@ public class Main {
                             System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)")
                     );
 
+            System.out.println(" === Méthode filtre (Student) === ");
+
+            // Chercher les étudiants qui s'appellent "Rayan"
+            List<Student> result1 = studentDAO.findByFilters("Rayan", null, null);
+            System.out.println("\n🎯 Etudiants qui s'appellent 'Rayan' :");
+            result1.forEach(s -> System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)"));
+
+            // Chercher les étudiants de plus de 20,ans
+            List<Student> result2 = studentDAO.findByFilters(null, 20, null);
+            System.out.println("\n🎯 Etudiants de plus de 20 ans :");
+            result2.forEach(s -> System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)"));
+
+            // Chercher les étudiants qui suivent "Physique"
+            List<Student> result3 = studentDAO.findByFilters(null, null, "Physique");
+            System.out.println("\n🎯 Etudiants qui suivent 'Physique' :");
+            result3.forEach(s -> System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)"));
+
+            // Chercher les étudiants appelés "Rayan", de plus de 18 ans, qui suivent "Math"
+            List<Student> result4 = studentDAO.findByFilters("Rayan", 18, "Maths");
+            System.out.println("\n🎯 Etudiants appelés 'Rayan', de plus de 18 ans, qui suivent 'Maths' :");
+            result4.forEach(s -> System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)"));
+
+            // =========================
+            // Tests Criteria API Teacher
+            // =========================
+
+            System.out.println("\n==== Test Criteria API (Teacher) ====");
+
+            // Rechercher prof dont le nom contient "Smith"
+            List<Teacher> teachersByName = teacherDAO.findByFilters("Smith", null);
+            System.out.println("\n Professeurs avec 'Smith' dans le nom :");
+            teachersByName.forEach(t ->
+                    System.out.println("- " + t.getName())
+            );
+
+            // Rechercher prof qui enseignent "Physique"
+            List<Teacher> teachersByCourse = teacherDAO.findByFilters(null, "Physique");
+            System.out.println("\n Professeurs qui enseignent 'Physique' :");
+            teachersByCourse.forEach(t ->
+                            System.out.println("- " + t.getName() + " enseigne : " +
+                                    t.getCourses().stream()
+                                            .map(Course::getTitle)
+                                            .collect(Collectors.joining(", ")))
+                    );
+
+            // Rechercher professeurs appelés "Mr. Smith" ET qui enseignent "Maths"
+            List<Teacher> teachersByNameAndCourse = teacherDAO.findByFilters("Mr. Smith", "Maths");
+            System.out.println("\n👨‍🏫 Professeurs appelés 'Mr. Smith' qui enseignent 'Maths' :");
+            teachersByNameAndCourse.forEach(t ->
+                            System.out.println("- " + t.getName() + " enseigne : " +
+                                    t.getCourses().stream()
+                                            .map(Course::getTitle)
+                                            .collect(Collectors.joining(", ")))
+                    );
+
             tx.commit(); // commit unique pour tout le bloc
             logger.info("💾 Toutes les opérations effectuées avec succès");
 

@@ -1,5 +1,6 @@
 package fr.eliess.dao;
 
+import fr.eliess.model.Course;
 import fr.eliess.model.Student;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.*;
@@ -53,6 +54,10 @@ public class StudentDAO extends GenericDAO<Student> {
                 .getResultList();
     }
 
+    // ===============================
+    // Requêtes avec JOIN FETCH
+    // ===============================
+
     // Récupère tous les étudiants avec leurs cours (évite le problème N+1)
     public List<Student> findAllWithCourses() {
         return em.createQuery(
@@ -90,7 +95,9 @@ public class StudentDAO extends GenericDAO<Student> {
                 .getSingleResult();
     }
 
-
+    // ===============================
+    // Requêtes dynamiques (Criteria API)
+    // ===============================
 
     // Recherche avec Criteria API : âge supérieur à une valeur
     public List<Student> findByAgeGreaterThan(int age) {
@@ -174,6 +181,37 @@ public class StudentDAO extends GenericDAO<Student> {
         // SELECT DISTINCT s WHERE age >= minAge AND course.title = courseTitle
         cq.select(student).distinct(true)
                 .where(cb.and(ageCondition, courseCondition));
+
+        return em.createQuery(cq).getResultList();
+    }
+
+    public List<Student> findByFilters(String name, Integer minAge, String courseTitle) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Student> cq = cb.createQuery(Student.class);
+        Root<Student> student = cq.from(Student.class);
+        student.fetch("courses", JoinType.LEFT); // optimisation pour éviter LazyException
+
+        List<Predicate> predicates = new ArrayList<>();
+
+        // Filtre sur le nom
+        if (name != null && !name.isBlank()) {
+            predicates.add(cb.like(cb.lower(student.get("name")), "%" + name.toLowerCase() + "%"));
+        }
+
+        // Filtre sur l'âge minimum
+        if (minAge != null) {
+            predicates.add(cb.ge(student.get("age"), minAge));
+        }
+
+        // Filtre sur le titre du cours
+        if (courseTitle != null && !courseTitle.isBlank()) {
+            Join<Student, Course> course = student.join("courses", JoinType.INNER);
+            predicates.add(cb.equal(course.get("title"), courseTitle));
+        }
+
+        // Construction finale : SELECT DISTINCRT s FROM Student s WHERE ...
+        cq.select(student).distinct(true)
+                .where(predicates.toArray(new Predicate[0]));
 
         return em.createQuery(cq).getResultList();
     }
@@ -351,6 +389,61 @@ public class StudentDAO extends GenericDAO<Student> {
     INNER JOIN course c ON sc.course_id = c.id
     WHERE s.age >= 20
       AND c.title = 'Physique';
+
+    ===============================================================================
+
+    Méthode findByFilters(String name, Integer minAge, String courseTitle) :
+
+    Explication ligne par ligne
+
+    CriteriaBuilder cb = em.getCriteriaBuilder();
+    -> on récupère l’outil qui permet de construire les requêtes dynamiques.
+
+    CriteriaQuery<Student> cq = cb.createQuery(Student.class);
+    -> on crée une requête qui retournera des Student.
+
+    Root<Student> student = cq.from(Student.class);
+    -> point de départ de la requête (FROM Student s).
+
+    student.fetch("courses", JoinType.LEFT);
+    -> on charge directement les cours liés
+    pour éviter le problème LazyInitializationException.
+
+    List<Predicate> predicates = new ArrayList<>();
+    -> une liste vide de conditions
+    (qui seront ajoutées seulement si les paramètres sont fournis).
+
+    Filtre name :
+
+    if (name != null && !name.isBlank()) {
+        predicates.add(cb.like(cb.lower(student.get("name")), "%" + name.toLowerCase() + "%"));
+    }
+
+    -> si name est donné, on fait un LIKE insensible à la casse.
+
+    Filtre minAge :
+
+    if (minAge != null) {
+        predicates.add(cb.ge(student.get("age"), minAge));
+    }
+
+    -> si minAge est donné, on ajoute age >= minAge.
+
+    Filtre courseTitle :
+
+    if (courseTitle != null && !courseTitle.isBlank()) {
+        Join<Student, Course> course = student.join("courses", JoinType.INNER);
+        predicates.add(cb.equal(course.get("title"), courseTitle));
+    }
+
+    si courseTitle est donné, on joint Course et on filtre dessus.
+
+    cq.select(student).distinct(true).where(predicates.toArray(new Predicate[0]));
+    -> construit la requête finale avec WHERE dynamique.
+    -> distinct(true) évite les doublons (à cause du join).
+
+    return em.createQuery(cq).getResultList();
+    -> exécution de la requête, résultat = liste des Student.
 
     */
 

@@ -185,6 +185,7 @@ public class StudentDAO extends GenericDAO<Student> {
         return em.createQuery(cq).getResultList();
     }
 
+    // Criteria API : (tri) récupère les étudiants avec l'âge minimum et les cours qui suivent via un filtre
     public List<Student> findByFilters(String name, Integer minAge, String courseTitle) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Student> cq = cb.createQuery(Student.class);
@@ -212,6 +213,76 @@ public class StudentDAO extends GenericDAO<Student> {
         // Construction finale : SELECT DISTINCRT s FROM Student s WHERE ...
         cq.select(student).distinct(true)
                 .where(predicates.toArray(new Predicate[0]));
+
+        return em.createQuery(cq).getResultList();
+    }
+
+    // Criteria API : renvoie les étudiants page par page, avec option tri(ex: par nom ou ââge)
+    public List<Student> findPaginated(int pageNumber, int pageSize, String sortField, boolean asc) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Student> cq = cb.createQuery(Student.class);
+        Root<Student> student = cq.from(Student.class);
+
+        // Tri dynamique
+        if (asc) {
+            cq.orderBy(cb.asc(student.get(sortField)));
+        } else {
+            cq.orderBy(cb.desc(student.get(sortField)));
+        }
+
+        return em.createQuery(cq)
+                .setFirstResult((pageNumber - 1) * pageSize) // offset
+                .setMaxResults(pageSize) // limit
+                .getResultList();
+    }
+
+    // Compter le nombre d'élèves en fonction du cours suivi
+    public List<Object[]> countStudentsByCourse() {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Object[]> cq = cb.createQuery(Object[].class);
+        Root<Student> student = cq.from(Student.class);
+
+        Join<Object, Object> courses = student.join("courses", JoinType.INNER);
+
+        // SELECT c.title, COUNT(s.id)
+        cq.multiselect(courses.get("title"), cb.count(student.get("id")));
+        cq.groupBy(courses.get("title"));
+        cq.orderBy(cb.asc(courses.get("title"))); // optionnel : tri alphabétique
+
+        return em.createQuery(cq).getResultList();
+    }
+
+    /*
+
+    Méthode countStudentsByCourse() version JPQL :
+
+    public List<Object[]> countStudentsByCourseJPQL() {
+    return em.createQuery(
+            "SELECT c.title, COUNT(s.id) " +
+            "FROM Student s JOIN s.courses c " +
+            "GROUP BY c.title " +
+            "ORDER BY c.title ASC",
+            Object[].class
+    ).getResultList();
+}
+
+    */
+
+    // Méthode qui retourne uniquement les cours où il y a au moins 2 élèves
+    public List<Object[]> countStudentsByCourseHaving(int minStudents) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Object[]> cq = cb.createQuery(Object[].class);
+
+        Root<Student> student = cq.from(Student.class);
+        Join<Student, Course> courseJoin = student.join("courses");
+
+        // Sélection : titre du cours + nombre d'étudiants
+        Expression<Long> studentCount = cb.count(student.get("id"));
+
+        cq.multiselect(courseJoin.get("title"), studentCount)
+                .groupBy(courseJoin.get("title"))
+                .having(cb.greaterThanOrEqualTo(studentCount, 2L))
+                .orderBy(cb.asc(courseJoin.get("title")));
 
         return em.createQuery(cq).getResultList();
     }
@@ -444,6 +515,10 @@ public class StudentDAO extends GenericDAO<Student> {
 
     return em.createQuery(cq).getResultList();
     -> exécution de la requête, résultat = liste des Student.
+
+    ==============================================================================
+
+
 
     */
 

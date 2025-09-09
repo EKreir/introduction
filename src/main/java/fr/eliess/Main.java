@@ -262,6 +262,49 @@ public class Main {
                                             .collect(Collectors.joining(", ")))
                     );
 
+            // =========================
+            // Test Pagination + Tri
+            // =========================
+
+            System.out.println("\n===== Pagination & Tri =====");
+
+            List<Student> page1 = studentDAO.findPaginated(1, 2, "age", true);
+            System.out.println("Page 1 (tri par âge croissant) :");
+            page1.forEach(s -> System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)"));
+
+            List<Student> page2 = studentDAO.findPaginated(2, 2, "age", true);
+            System.out.println("📄 Page 2 (tri par âge croissant) :");
+            page2.forEach(s -> System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)"));
+
+            List<Student> pageDesc = studentDAO.findPaginated(1, 3, "name", false);
+            System.out.println("📄 Page 1 (tri par nom décroissant) :");
+            pageDesc.forEach(s -> System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)"));
+
+            // =========================
+            // Test Group By
+            // =========================
+
+            System.out.println("\n===== Nombre d'étudiants par cours =====");
+
+            List<Object[]> stats = studentDAO.countStudentsByCourse();
+            for (Object[] row : stats) {
+                String courseTitle = (String) row[0];
+                Long studentCount = (Long) row[1];
+                System.out.println("- " + courseTitle + " : " + studentCount + " étudiant(s)");
+            }
+
+            // =========================
+            // Test Group By + HAVING (Criteria API)
+            // =========================
+            System.out.println("\n===== Cours avec au moins 2 étudiants (Criteria API + HAVING) =====");
+
+            List<Object[]> statsHaving = studentDAO.countStudentsByCourseHaving(2);
+            for (Object[] row : statsHaving) {
+                String courseTitle = (String) row[0];
+                Long studentCount = (Long) row[1];
+                System.out.println("- " + courseTitle + " : " + studentCount + " étudiant(s)");
+            }
+
             tx.commit(); // commit unique pour tout le bloc
             logger.info("💾 Toutes les opérations effectuées avec succès");
 

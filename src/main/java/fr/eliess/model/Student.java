@@ -52,6 +52,19 @@ public class Student {
     @OneToOne(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private StudentProfile profile;
 
+    @Embedded
+    private Address address;
+
+    @Version
+    private int version;
+
+    @ElementCollection
+    @CollectionTable(name = "student_phone",
+            joinColumns = @JoinColumn(name = "student_id")
+    )
+    @Column(name = "phone_number")
+    private Set<String> phones = new HashSet<>();
+
     public Student(String name, int age) {
         this.name = name;
         this.age = age;
@@ -61,6 +74,16 @@ public class Student {
         if (courses.add(course)) {
             course.getStudents().add(this);
         }
+    }
+
+    @PrePersist
+    public void beforeInsert() {
+        System.out.println("Insertion de l’étudiant : " + name);
+    }
+
+    @PreUpdate
+    public void beforeUpdate() {
+        System.out.println("Mise à jour de l’étudiant : " + name);
     }
 
     /*
@@ -99,6 +122,19 @@ public class Student {
 
     Avantage :
     les requêtes sont centralisées dans l’entité et réutilisables partout dans l’application.
+
+    ======================================================================
+
+    Explications imports :
+
+    jakarta.persistence.ElementCollection ->
+    indique que ce n’est pas une entité mais une collection d’éléments simples.
+
+    CollectionTable -> nom de la table qui stockera les valeurs.
+
+    JoinColumn -> colonne qui fait le lien avec Student.
+
+    Column -> nom de la colonne dans la table collection.
 
     */
 

@@ -4,10 +4,7 @@ import fr.eliess.dao.CourseDAO;
 import fr.eliess.dao.StudentDAO;
 import fr.eliess.dao.TeacherDAO;
 import fr.eliess.dto.CourseWithCountDTO;
-import fr.eliess.model.Course;
-import fr.eliess.model.Student;
-import fr.eliess.model.StudentProfile;
-import fr.eliess.model.Teacher;
+import fr.eliess.model.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
@@ -54,25 +51,33 @@ public class Main {
             tx.begin(); // Une seule transaction pour tout
 
             // =========================
-            //️  Création des profils et étudiants
+            // Création d'étudiants avec Address et Phones
             // =========================
-            StudentProfile profileRayan = new StudentProfile("123 Rue Principale", "0601020304");
-            StudentProfile profileFahd = new StudentProfile("456 Avenue Centrale", "0605060708");
-
             Student rayan = new Student("Rayan", 18);
-            rayan.setProfile(profileRayan);
-            profileRayan.setStudent(rayan);
+            rayan.setAddress(new Address("123 Rue Principale", "Paris", "75001"));
+            rayan.getPhones().add("0601020304");
+            rayan.getPhones().add("0601122334");
 
             Student fahd = new Student("Fahd", 24);
-            fahd.setProfile(profileFahd);
-            profileFahd.setStudent(fahd);
+            fahd.setAddress(new Address("456 Avenue Centrale", "Lyon", "69002"));
+            fahd.getPhones().add("0605060708");
 
             // =========================
-            // Création des cours et du professeur
+            // Profils
+            // =========================
+            StudentProfile profileRayan = new StudentProfile("123 Rue Principale", "0601020304");
+            profileRayan.setStudent(rayan);
+            rayan.setProfile(profileRayan);
+
+            StudentProfile profileFahd = new StudentProfile("456 Avenue Centrale", "0605060708");
+            profileFahd.setStudent(fahd);
+            fahd.setProfile(profileFahd);
+
+            // =========================
+            // Création cours + prof
             // =========================
             Course maths = new Course("Maths");
             Course physics = new Course("Physique");
-
             Teacher mrSmith = new Teacher("Mr. Smith");
             mrSmith.addCourse(maths);
             mrSmith.addCourse(physics);
@@ -92,31 +97,37 @@ public class Main {
             studentDAO.create(fahd);
 
             // =========================
-            // Modification : profil de Rayan + ajout d'un cours
+            // Test @Version et @PreUpdate
             // =========================
-            rayan.getProfile().setAddress("999 Nouvelle Adresse");
-            rayan.getProfile().setPhone("0611223344");
-
-            Course english = new Course("Anglais");
-            rayan.addCourse(english);
-            courseDAO.create(english);
+            rayan.getAddress().setStreet("999 Nouvelle Adresse"); // déclenche @PreUpdate
+            rayan.getPhones().add("0611223344");
 
             // =========================
-            // Affichage final (méthodes existantes)
+            // Affichage étudiants avec Address et Phones
             // =========================
-            displayAllStudents(studentDAO);
-            displayTeacherWithCourses(teacherDAO, mrSmith.getId());
+            System.out.println("\n=== Étudiants avec Address et Phones ===");
+            List<Student> students = studentDAO.findAllWithCourses();
+            for (Student s : students) {
+                String profileInfo = (s.getProfile() != null)
+                        ? s.getProfile().getAddress() + " | " + s.getProfile().getPhone()
+                        : "aucun profil";
+                String courses = s.getCourses().stream()
+                        .map(Course::getTitle)
+                        .collect(Collectors.joining(", "));
+                String phones = String.join(", ", s.getPhones());
+                String address = (s.getAddress() != null)
+                        ? s.getAddress().getStreet() + ", " + s.getAddress().getCity() + " " + s.getAddress().getZip()
+                        : "aucune adresse";
+                System.out.println(s.getName() + " (Profil: " + profileInfo + ", Address: " + address + ", Phones: " + phones + ") suit : " +
+                        (courses.isEmpty() ? "aucun cours" : courses));
+            }
 
-            Student rayanFromDB = studentDAO.findWithProfileAndCourses(rayan.getId());
-            System.out.println("\n👤 Étudiant (profil + cours) : " + rayanFromDB.getName());
-            System.out.println("Profil : " + rayanFromDB.getProfile().getAddress()
-                    + " | " + rayanFromDB.getProfile().getPhone());
-            System.out.println("Cours : " + rayanFromDB.getCourses().stream()
-                    .map(Course::getTitle)
-                    .collect(Collectors.joining(", ")));
-
+            // =========================
+            // Affichage des professeurs + leurs cours + étudiants
+            // =========================
+            System.out.println("\n=== Professeurs et leurs cours ===");
             Teacher teacherFull = teacherDAO.findWithCoursesAndStudents(mrSmith.getId());
-            System.out.println("\n👨‍🏫 Professeur (cours + étudiants) : " + teacherFull.getName());
+            System.out.println("👨‍🏫 " + teacherFull.getName());
             teacherFull.getCourses().forEach(c ->
                     System.out.println("- " + c.getTitle() + " suivi par : " +
                             c.getStudents().stream()
@@ -127,280 +138,39 @@ public class Main {
             // =========================
             // Tests Criteria API
             // =========================
-            System.out.println("\n===== Tests Criteria API =====");
-
-            // Étudiants avec âge > 20
+            System.out.println("\n=== Étudiants > 20 ans ===");
             List<Student> olderStudents = studentDAO.findByAgeGreaterThan(20);
-            System.out.println("\n👴 Étudiants âgés de plus de 20 ans :");
-            olderStudents.forEach(s ->
-                    System.out.println(s.getName() + " (" + s.getAge() + " ans)")
-            );
+            olderStudents.forEach(s -> System.out.println(s.getName() + " (" + s.getAge() + " ans)"));
 
-            // Étudiants nom = "Rayan" et âge >= 18
+            System.out.println("\n=== Étudiants nommés 'Rayan' et ≥18 ans ===");
             List<Student> filteredStudents = studentDAO.findByDynamicCriteria("Rayan", 18);
-            System.out.println("\n🎯 Étudiants nommés 'Rayan' avec au moins 18 ans :");
-            filteredStudents.forEach(s ->
-                    System.out.println(s.getName() + " (" + s.getAge() + " ans)")
-            );
-
-            // Étudiants uniquement avec âge >= 18 (nom = null)
-            List<Student> onlyByAge = studentDAO.findByDynamicCriteria(null, 18);
-            System.out.println("\n📌 Étudiants avec au moins 18 ans (sans filtrer par nom) :");
-            onlyByAge.forEach(s ->
-                    System.out.println(s.getName() + " (" + s.getAge() + " ans)")
-            );
-
-            // Étudiants uniquement avec nom = "Fahd" (âge = null)
-            List<Student> onlyByName = studentDAO.findByDynamicCriteria("Fahd", null);
-            System.out.println("\n📌 Étudiants avec le nom 'Fahd' (sans filtrer par âge) :");
-            onlyByName.forEach(s ->
-                    System.out.println(s.getName() + " (" + s.getAge() + " ans)")
-            );
-
-            // Tous les étudiants (aucun critère)
-            List<Student> allStudentsDynamic = studentDAO.findByDynamicCriteria(null, null);
-            System.out.println("\n Tous les étudiants (aucun critère appliqué) :");
-            allStudentsDynamic.forEach(s ->
-                    System.out.println(s.getName() + " (" + s.getAge() + " ans)")
-            );
+            filteredStudents.forEach(s -> System.out.println(s.getName() + " (" + s.getAge() + " ans)"));
 
             // =========================
-            // Test Criteria API : étudiants + cours
+            // Tests Named Queries
             // =========================
-
-            List<Student> studentsCriteria = studentDAO.findAllWithCoursesCriteria();
-            System.out.println("\n Liste des étudiants (Criteria API)");
-            for (Student s : studentsCriteria) {
-                String profileInfo = (s.getProfile() != null)
-                        ? s.getProfile().getAddress() + " | " + s.getProfile().getPhone()
-                        : "aucun profil";
-                String courses = s.getCourses().stream()
-                        .map(Course::getTitle)
-                        .collect(Collectors.joining(", "));
-                System.out.println(s.getName() + " (Profil: " + profileInfo + ") suit : " +
-                        (courses.isEmpty() ? "aucun cours" : courses));
-            }
-
-            // =========================
-            // Test Criteria API : étudiants + profil + cours
-            // =========================
-
-            List<Student> studentsProfileCourses = studentDAO.findAllWithProfileAndCoursesCriteria();
-            System.out.println("\n Liste des étudiants (Criteria API : profil + cours) :");
-            for (Student s : studentsProfileCourses) {
-                String profileInfo = (s.getProfile() != null)
-                        ? s.getProfile().getAddress() + " | " + s.getProfile().getPhone()
-                        : "aucun profil";
-                String courses = s.getCourses().stream()
-                        .map(Course::getTitle)
-                        .collect(Collectors.joining(", "));
-                System.out.println(s.getName() + " (Profil: " + profileInfo + ") suit : " +
-                        (courses.isEmpty() ? "aucun cours" : courses));
-            }
-
-            // =========================
-            // Test Criteria API dynamique : âge + cours
-            // =========================
-
-            List<Student> studentsFiltered = studentDAO.findByAgeAndCourseTitle(20, "Physique");
-            System.out.println("\n Etudiants de 20 ans ou + qui suivent 'Physique' :");
-            studentsFiltered.forEach(s ->
-                            System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)")
-                    );
-
-            System.out.println(" === Méthode filtre (Student) === ");
-
-            // Chercher les étudiants qui s'appellent "Rayan"
-            List<Student> result1 = studentDAO.findByFilters("Rayan", null, null);
-            System.out.println("\n🎯 Etudiants qui s'appellent 'Rayan' :");
-            result1.forEach(s -> System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)"));
-
-            // Chercher les étudiants de plus de 20,ans
-            List<Student> result2 = studentDAO.findByFilters(null, 20, null);
-            System.out.println("\n🎯 Etudiants de plus de 20 ans :");
-            result2.forEach(s -> System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)"));
-
-            // Chercher les étudiants qui suivent "Physique"
-            List<Student> result3 = studentDAO.findByFilters(null, null, "Physique");
-            System.out.println("\n🎯 Etudiants qui suivent 'Physique' :");
-            result3.forEach(s -> System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)"));
-
-            // Chercher les étudiants appelés "Rayan", de plus de 18 ans, qui suivent "Math"
-            List<Student> result4 = studentDAO.findByFilters("Rayan", 18, "Maths");
-            System.out.println("\n🎯 Etudiants appelés 'Rayan', de plus de 18 ans, qui suivent 'Maths' :");
-            result4.forEach(s -> System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)"));
-
-            // =========================
-            // Tests Criteria API Teacher
-            // =========================
-
-            System.out.println("\n==== Test Criteria API (Teacher) ====");
-
-            // Rechercher prof dont le nom contient "Smith"
-            List<Teacher> teachersByName = teacherDAO.findByFilters("Smith", null);
-            System.out.println("\n Professeurs avec 'Smith' dans le nom :");
-            teachersByName.forEach(t ->
-                    System.out.println("- " + t.getName())
-            );
-
-            // Rechercher prof qui enseignent "Physique"
-            List<Teacher> teachersByCourse = teacherDAO.findByFilters(null, "Physique");
-            System.out.println("\n Professeurs qui enseignent 'Physique' :");
-            teachersByCourse.forEach(t ->
-                            System.out.println("- " + t.getName() + " enseigne : " +
-                                    t.getCourses().stream()
-                                            .map(Course::getTitle)
-                                            .collect(Collectors.joining(", ")))
-                    );
-
-            // Rechercher professeurs appelés "Mr. Smith" ET qui enseignent "Maths"
-            List<Teacher> teachersByNameAndCourse = teacherDAO.findByFilters("Mr. Smith", "Maths");
-            System.out.println("\n👨‍🏫 Professeurs appelés 'Mr. Smith' qui enseignent 'Maths' :");
-            teachersByNameAndCourse.forEach(t ->
-                            System.out.println("- " + t.getName() + " enseigne : " +
-                                    t.getCourses().stream()
-                                            .map(Course::getTitle)
-                                            .collect(Collectors.joining(", ")))
-                    );
-
-            // =========================
-            // Test Pagination + Tri
-            // =========================
-
-            System.out.println("\n===== Pagination & Tri =====");
-
-            List<Student> p1 = studentDAO.findPaginated(1, 2, "age", true);
-            System.out.println("Page 1 (tri par âge croissant) :");
-            p1.forEach(s -> System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)"));
-
-            List<Student> p2 = studentDAO.findPaginated(2, 2, "age", true);
-            System.out.println("📄 Page 2 (tri par âge croissant) :");
-            p2.forEach(s -> System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)"));
-
-            List<Student> pageDesc = studentDAO.findPaginated(1, 3, "name", false);
-            System.out.println("📄 Page 1 (tri par nom décroissant) :");
-            pageDesc.forEach(s -> System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)"));
-
-            // =========================
-            // Test Group By
-            // =========================
-
-            System.out.println("\n===== Nombre d'étudiants par cours =====");
-
-            List<Object[]> stats = studentDAO.countStudentsByCourse();
-            for (Object[] row : stats) {
-                String courseTitle = (String) row[0];
-                Long studentCount = (Long) row[1];
-                System.out.println("- " + courseTitle + " : " + studentCount + " étudiant(s)");
-            }
-
-            // =========================
-            // Test Group By + HAVING (Criteria API)
-            // =========================
-            System.out.println("\n===== Cours avec au moins 2 étudiants (Criteria API + HAVING) =====");
-
-            List<Object[]> statsHaving = studentDAO.countStudentsByCourseHaving(2);
-            for (Object[] row : statsHaving) {
-                String courseTitle = (String) row[0];
-                Long studentCount = (Long) row[1];
-                System.out.println("- " + courseTitle + " : " + studentCount + " étudiant(s)");
-            }
-
-            // =========================
-            // Test Criteria API : étudiants > âge moyen
-            // =========================
-            List<Student> olderThanAvg = studentDAO.findOlderThanAverage();
-            System.out.println("\n Étudiants plus âgés que la moyenne :");
-            olderThanAvg.forEach(s ->
-                    System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)")
-            );
-
-            // =========================
-            // Test Criteria API : pagination + tri
-            // =========================
-
-            System.out.println("\n===== Pagination des étudiants (page 1, taille 2) =====");
-            List<Student> page1 = studentDAO.findAllPaginated(1, 2);
-            page1.forEach(s -> System.out.println("- " + s.getName()));
-
-            System.out.println("\n===== Pagination des étudiants (page 2, taille 2) =====");
-            List<Student> page2 = studentDAO.findAllPaginated(2, 2);
-            page2.forEach(s -> System.out.println("- " + s.getName()));
-
-            // =========================
-            // Test Criteria API : pagination + tri étudiants + cours
-            // =========================
-
-            System.out.println("\n===== Pagination avec profils + cours (page 1, taille 2) =====");
-            List<Student> pag1 = studentDAO.findAllWithProfileAndCoursesPaginated(1, 2);
-            for (Student s : pag1) {
-                String profileInfo = (s.getProfile() != null)
-                        ? s.getProfile().getAddress() + " | " + s.getProfile().getPhone()
-                        : "aucun profil";
-                String courses = s.getCourses().stream()
-                        .map(Course::getTitle)
-                        .collect(Collectors.joining(", "));
-                System.out.println(s.getName() + " (Profil: " + profileInfo + ") suit : " +
-                        (courses.isEmpty() ? "aucun cours" : courses));
-            }
-
-            System.out.println("\n===== Pagination avec profils + cours (page 2, taille 2) =====");
-            List<Student> pag2 = studentDAO.findAllWithProfileAndCoursesPaginated(2, 2);
-            pag2.forEach(s -> {
-                String courses = s.getCourses().stream()
-                        .map(Course::getTitle)
-                        .collect(Collectors.joining(", "));
-                System.out.println(s.getName() + " suit : " + (courses.isEmpty() ? "aucun cours" : courses));
-            });
-
-            // =========================
-            // Test Criteria API : sous-requête IN, NOT EXISTS, corrélée
-            // =========================
-
-            System.out.println("\n=== Sous-requête avec IN ===");
-            List<Student> taughtBySmith = studentDAO.findStudentsByTeacherName("Mr. Smith");
-            taughtBySmith.forEach(s -> System.out.println("- " + s.getName()));
-
-            System.out.println("\n=== Sous-requête avec NOT EXISTS ===");
-            List<Teacher> noCourses = teacherDAO.findTeachersWithoutCourses();
-            noCourses.forEach(t -> System.out.println("- " + t.getName()));
-
-            System.out.println("\n=== Sous-requête corrélée ===");
-            List<Student> crowdedCourses = studentDAO.findStudentsInCrowdedCourses(2);
-            crowdedCourses.forEach(s -> System.out.println("- " + s.getName()));
-
-            // =========================
-            // Test des Named Queries
-            // =========================
-
-            System.out.println("\n=== Tests des Named Queries ===");
-
-            // Étudiants avec le nom "Rayan"
+            System.out.println("\n=== Étudiants avec NamedQuery findByName ===");
             List<Student> studentsNamedRayan = studentDAO.findByName("Rayan");
             studentsNamedRayan.forEach(s ->
-                    System.out.println("👤 Étudiant trouvé : " + s.getName() + ", âge " + s.getAge())
+                    System.out.println(s.getName() + " (" + s.getAge() + " ans)")
             );
 
-            // Étudiants plus vieux que 20 ans
+            System.out.println("\n=== Étudiants plus vieux que 20 ans (NamedQuery findOlderThan) ===");
             List<Student> olderStudent = studentDAO.findOlderThan(20);
-            olderStudent.forEach(s ->
-                    System.out.println("👴 Étudiant plus âgé que 20 ans : " + s.getName() + " (" + s.getAge() + " ans)")
-            );
+            olderStudent.forEach(s -> System.out.println(s.getName() + " (" + s.getAge() + " ans)"));
 
-            // Cours avec le nombre d’étudiants
+            // =========================
+            // NamedNativeQuery : CourseWithCountDTO
+            // =========================
+            System.out.println("\n=== Nombre d'étudiants par cours (DTO) ===");
             List<CourseWithCountDTO> coursesWithCounts = courseDAO.findAllWithStudentCount();
             coursesWithCounts.forEach(c ->
-                    System.out.println("📘 " + c.getTitle() + " → " + c.getStudentCount() + " étudiants")
+                    System.out.println(c.getTitle() + " → " + c.getStudentCount() + " étudiants")
             );
 
-            //
-            System.out.println("=== Cours avec au moins 2 étudiants ===");
+            System.out.println("\n=== Cours avec au moins 2 étudiants ===");
             List<CourseWithCountDTO> coursesMin2 = courseDAO.findCoursesWithMinStudents(2);
             coursesMin2.forEach(System.out::println);
-
-            System.out.println("=== Cours avec au moins 3 étudiants ===");
-            List<CourseWithCountDTO> coursesMin3 = courseDAO.findCoursesWithMinStudents(3);
-            coursesMin3.forEach(System.out::println);
 
 
             tx.commit(); // commit unique pour tout le bloc

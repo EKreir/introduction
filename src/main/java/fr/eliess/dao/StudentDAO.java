@@ -30,6 +30,26 @@ public class StudentDAO extends GenericDAO<Student> {
         super(em, Student.class);
     }
 
+    // === Named Queries ===
+
+    /** Trouve les étudiants par nom */
+    public List<Student> findByNames(String name) {
+        return em.createNamedQuery("Student.findByName", Student.class)
+                .setParameter("name", name)
+                .getResultList();
+    }
+
+    /** Trouve les étudiants plus vieux qu’un certain âge */
+    public List<Student> findOlderThan(int age) {
+        return em.createNamedQuery("Student.findOlderThan", Student.class)
+                .setParameter("age", age)
+                .getResultList();
+    }
+
+    //===============================
+    // Anciennes méthodes et requêtes
+    //===============================
+
     // Recherche tous les étudiants par nom exact
     public List<Student> findByName(String name) {
         return em.createQuery(

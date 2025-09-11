@@ -3,6 +3,7 @@ package fr.eliess;
 import fr.eliess.dao.CourseDAO;
 import fr.eliess.dao.StudentDAO;
 import fr.eliess.dao.TeacherDAO;
+import fr.eliess.dto.CourseWithCountDTO;
 import fr.eliess.model.Course;
 import fr.eliess.model.Student;
 import fr.eliess.model.StudentProfile;
@@ -367,6 +368,39 @@ public class Main {
             System.out.println("\n=== Sous-requête corrélée ===");
             List<Student> crowdedCourses = studentDAO.findStudentsInCrowdedCourses(2);
             crowdedCourses.forEach(s -> System.out.println("- " + s.getName()));
+
+            // =========================
+            // Test des Named Queries
+            // =========================
+
+            System.out.println("\n=== Tests des Named Queries ===");
+
+            // Étudiants avec le nom "Rayan"
+            List<Student> studentsNamedRayan = studentDAO.findByName("Rayan");
+            studentsNamedRayan.forEach(s ->
+                    System.out.println("👤 Étudiant trouvé : " + s.getName() + ", âge " + s.getAge())
+            );
+
+            // Étudiants plus vieux que 20 ans
+            List<Student> olderStudent = studentDAO.findOlderThan(20);
+            olderStudent.forEach(s ->
+                    System.out.println("👴 Étudiant plus âgé que 20 ans : " + s.getName() + " (" + s.getAge() + " ans)")
+            );
+
+            // Cours avec le nombre d’étudiants
+            List<CourseWithCountDTO> coursesWithCounts = courseDAO.findAllWithStudentCount();
+            coursesWithCounts.forEach(c ->
+                    System.out.println("📘 " + c.getTitle() + " → " + c.getStudentCount() + " étudiants")
+            );
+
+            //
+            System.out.println("=== Cours avec au moins 2 étudiants ===");
+            List<CourseWithCountDTO> coursesMin2 = courseDAO.findCoursesWithMinStudents(2);
+            coursesMin2.forEach(System.out::println);
+
+            System.out.println("=== Cours avec au moins 3 étudiants ===");
+            List<CourseWithCountDTO> coursesMin3 = courseDAO.findCoursesWithMinStudents(3);
+            coursesMin3.forEach(System.out::println);
 
 
             tx.commit(); // commit unique pour tout le bloc

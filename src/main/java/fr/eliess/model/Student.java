@@ -12,6 +12,16 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString(exclude = {"courses", "profile"})
+@NamedQueries({
+        @NamedQuery(
+                name = "Student.findByName",
+                query = "SELECT s FROM Student s WHERE s.name = :name"
+        ),
+        @NamedQuery(
+                name = "Student.findOlderThan",
+                query = "SELECT s FROM Student s WHERE s.age > :age"
+        )
+})
 public class Student {
 
     @Id
@@ -52,5 +62,44 @@ public class Student {
             course.getStudents().add(this);
         }
     }
+
+    /*
+
+    On a ajouté deux Named Queries :
+
+    Student.findByName →-> retourne les étudiants avec un nom donné.
+
+    Student.findOlderThan -> retourne ceux plus vieux qu’un âge donné.
+
+    ========================================================================
+
+    Explication :
+
+    @NamedQueries : regroupe plusieurs @NamedQuery pour une entité.
+
+    Chaque @NamedQuery a :
+    name -> identifiant unique que tu utilises dans le DAO pour exécuter la requête.
+    query -> la requête JPQL "précompilée" qui sera exécutée par Hibernate.
+
+    Exemple concret :
+
+    Student.findByName
+    Retourne tous les étudiants dont name = :name.
+
+    Dans le DAO :
+
+    em.createNamedQuery("Student.findByName", Student.class)
+      .setParameter("name", "Rayan")
+      .getResultList();
+
+    Student.findOlderThan
+
+    Retourne tous les étudiants dont age > :age.
+    Paramètre :age dynamique.
+
+    Avantage :
+    les requêtes sont centralisées dans l’entité et réutilisables partout dans l’application.
+
+    */
 
 }

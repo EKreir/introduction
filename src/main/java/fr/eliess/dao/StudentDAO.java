@@ -2,7 +2,9 @@ package fr.eliess.dao;
 
 import fr.eliess.model.Course;
 import fr.eliess.model.Student;
+import fr.eliess.model.Teacher;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.*;
 
 import java.util.ArrayList;
@@ -287,6 +289,120 @@ public class StudentDAO extends GenericDAO<Student> {
         return em.createQuery(cq).getResultList();
     }
 
+    // Trouver les élèves dont l'âge > âge moyen
+    public List<Student> findOlderThanAverage() {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Student> cq = cb.createQuery(Student.class);
+        Root<Student> student = cq.from(Student.class);
+
+        // === sous-requête pour calculer l'âge moyen ===
+        Subquery<Double> subquery = cq.subquery(Double.class);
+        Root<Student> subRoot = subquery.from(Student.class);
+        subquery.select(cb.avg(subRoot.get("age")));
+
+        // Condition : âge > (âge moyen)
+        cq.select(student).where(cb.gt(student.get("age"), subquery));
+
+        return em.createQuery(cq).getResultList();
+    }
+
+    /*
+
+    Méthode de pagination
+    Elle prendra deux paramètres :
+
+    pageNumber -> numéro de la page (commence à 1)
+
+    pageSize -> nombre d’éléments par page
+
+    Elle retournera une liste paginée d’étudiants.
+
+
+    */
+
+    public List<Student> findAllPaginated(int pageNumber, int pageSize) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Student> cq = cb.createQuery(Student.class);
+        Root<Student> student = cq.from(Student.class);
+
+        // Tri : :ordre alphabétique sur le nom
+        cq.select(student).orderBy(cb.asc(student.get("name")));
+
+        TypedQuery<Student> query = em.createQuery(cq);
+
+        // Pagination
+        query.setFirstResult((pageNumber - 1) * pageSize); // décalage
+        query.setMaxResults(pageSize); // limite
+
+        return query.getResultList();
+    }
+
+    public List<Student> findAllWithProfileAndCoursesPaginated(int pageNumber, int pageSize) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Student> cq = cb.createQuery(Student.class);
+        Root<Student> student = cq.from(Student.class);
+
+        // Criteria API n'a pas de JOIN FETCH direct
+        // mais on peut simuler avce fetch()
+        student.fetch("profile", JoinType.LEFT);
+        student.fetch("courses", JoinType.LEFT);
+
+        cq.select(student).distinct(true); // éviter les doublons causé par JOIN
+
+        // Tri par nom
+        cq.orderBy(cb.asc(student.get("name")));
+
+        TypedQuery<Student> query = em.createQuery(cq);
+
+        // Pagination
+        query.setFirstResult((pageNumber - 1) * pageSize);
+        query.setMaxResults(pageSize);
+
+        return query.getResultList();
+    }
+
+    // Criteria API: sous-requête avec IN
+    public List<Student> findStudentsByTeacherName(String teacherName) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Student> cq = cb.createQuery(Student.class);
+        Root<Student> student = cq.from(Student.class);
+
+        // Sous-requête : récupérer les ID des cours enseignés par un prof donné
+        Subquery<Long> subquery = cq.subquery(Long.class);
+        Root<Teacher> teacher = subquery.from(Teacher.class);
+        Join<Teacher, Course> teacherCourses = teacher.join("courses");
+        subquery.select(teacherCourses.get("id"))
+                .where(cb.equal(teacher.get("name"), teacherName));
+
+        // Etudiants qui suivent un de ces cours
+        Join<Student, Course> studentCourses = student.join("courses");
+        cq.select(student).distinct(true)
+                .where(studentCourses.get("id").in(subquery));
+
+        return em.createQuery(cq).getResultList();
+    }
+
+    // Sous-requête corrélée
+    public List<Student> findStudentsInCrowdedCourses(int minStudents) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Student> cq = cb.createQuery(Student.class);
+        Root<Student> student = cq.from(Student.class);
+        Join<Student, Course> studentCourse = student.join("courses");
+
+        // Sous-requête corrélée : compter les étudiants par cours
+        Subquery<Long> subquery = cq.subquery(Long.class);
+        Root<Course> subCourse = subquery.from(Course.class);
+        Join<Course, Student> subStudents = subCourse.join("students");
+        subquery.select(cb.count(subStudents))
+                .where(cb.equal(subCourse, studentCourse));
+
+        // Condition : cours avec au moins minStudents
+        cq.select(student).distinct(true)
+                .where(cb.greaterThanOrEqualTo(subquery, (long) minStudents));
+
+        return em.createQuery(cq).getResultList();
+    }
+
     /*
 
      Explications simples
@@ -518,7 +634,39 @@ public class StudentDAO extends GenericDAO<Student> {
 
     ==============================================================================
 
+    Méthode findOlderThanAverage() :
 
+    Subquery<Double> subquery = cq.subquery(Double.class);
+    -> On déclare une sous-requête qui renvoie un Double (la moyenne).
+
+    subquery.select(cb.avg(subRoot.get("age")));
+    -> On calcule AVG(age) dans la sous-requête.
+
+    cq.select(student).where(cb.gt(student.get("age"), subquery));
+    -> On compare chaque étudiant avec le résultat de la sous-requête.
+
+    SQL généré par Hibernate :
+
+    SELECT s.*
+    FROM student s
+    WHERE s.age > (SELECT AVG(s2.age) FROM student s2)
+
+    =============================================================================
+
+    Méthode findAllPaginated(int pageNumber, int pageSize) :
+
+    orderBy(cb.asc(student.get("name"))) ->
+    tri alphabétique (on peut aussi mettre cb.desc() pour décroissant).
+
+    setFirstResult(...) -> décalage (offset).
+
+    setMaxResults(...) -> limite le nombre de résultats par requête.
+
+    Si on passe (pageNumber = 1, pageSize = 2) ->
+    il prend les 2 premiers étudiants.
+
+    Si on passe (pageNumber = 2, pageSize = 2) ->
+    il prend les 2 suivants, etc.
 
     */
 

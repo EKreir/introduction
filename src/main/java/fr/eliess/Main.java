@@ -268,13 +268,13 @@ public class Main {
 
             System.out.println("\n===== Pagination & Tri =====");
 
-            List<Student> page1 = studentDAO.findPaginated(1, 2, "age", true);
+            List<Student> p1 = studentDAO.findPaginated(1, 2, "age", true);
             System.out.println("Page 1 (tri par âge croissant) :");
-            page1.forEach(s -> System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)"));
+            p1.forEach(s -> System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)"));
 
-            List<Student> page2 = studentDAO.findPaginated(2, 2, "age", true);
+            List<Student> p2 = studentDAO.findPaginated(2, 2, "age", true);
             System.out.println("📄 Page 2 (tri par âge croissant) :");
-            page2.forEach(s -> System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)"));
+            p2.forEach(s -> System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)"));
 
             List<Student> pageDesc = studentDAO.findPaginated(1, 3, "name", false);
             System.out.println("📄 Page 1 (tri par nom décroissant) :");
@@ -304,6 +304,70 @@ public class Main {
                 Long studentCount = (Long) row[1];
                 System.out.println("- " + courseTitle + " : " + studentCount + " étudiant(s)");
             }
+
+            // =========================
+            // Test Criteria API : étudiants > âge moyen
+            // =========================
+            List<Student> olderThanAvg = studentDAO.findOlderThanAverage();
+            System.out.println("\n Étudiants plus âgés que la moyenne :");
+            olderThanAvg.forEach(s ->
+                    System.out.println("- " + s.getName() + " (" + s.getAge() + " ans)")
+            );
+
+            // =========================
+            // Test Criteria API : pagination + tri
+            // =========================
+
+            System.out.println("\n===== Pagination des étudiants (page 1, taille 2) =====");
+            List<Student> page1 = studentDAO.findAllPaginated(1, 2);
+            page1.forEach(s -> System.out.println("- " + s.getName()));
+
+            System.out.println("\n===== Pagination des étudiants (page 2, taille 2) =====");
+            List<Student> page2 = studentDAO.findAllPaginated(2, 2);
+            page2.forEach(s -> System.out.println("- " + s.getName()));
+
+            // =========================
+            // Test Criteria API : pagination + tri étudiants + cours
+            // =========================
+
+            System.out.println("\n===== Pagination avec profils + cours (page 1, taille 2) =====");
+            List<Student> pag1 = studentDAO.findAllWithProfileAndCoursesPaginated(1, 2);
+            for (Student s : pag1) {
+                String profileInfo = (s.getProfile() != null)
+                        ? s.getProfile().getAddress() + " | " + s.getProfile().getPhone()
+                        : "aucun profil";
+                String courses = s.getCourses().stream()
+                        .map(Course::getTitle)
+                        .collect(Collectors.joining(", "));
+                System.out.println(s.getName() + " (Profil: " + profileInfo + ") suit : " +
+                        (courses.isEmpty() ? "aucun cours" : courses));
+            }
+
+            System.out.println("\n===== Pagination avec profils + cours (page 2, taille 2) =====");
+            List<Student> pag2 = studentDAO.findAllWithProfileAndCoursesPaginated(2, 2);
+            pag2.forEach(s -> {
+                String courses = s.getCourses().stream()
+                        .map(Course::getTitle)
+                        .collect(Collectors.joining(", "));
+                System.out.println(s.getName() + " suit : " + (courses.isEmpty() ? "aucun cours" : courses));
+            });
+
+            // =========================
+            // Test Criteria API : sous-requête IN, NOT EXISTS, corrélée
+            // =========================
+
+            System.out.println("\n=== Sous-requête avec IN ===");
+            List<Student> taughtBySmith = studentDAO.findStudentsByTeacherName("Mr. Smith");
+            taughtBySmith.forEach(s -> System.out.println("- " + s.getName()));
+
+            System.out.println("\n=== Sous-requête avec NOT EXISTS ===");
+            List<Teacher> noCourses = teacherDAO.findTeachersWithoutCourses();
+            noCourses.forEach(t -> System.out.println("- " + t.getName()));
+
+            System.out.println("\n=== Sous-requête corrélée ===");
+            List<Student> crowdedCourses = studentDAO.findStudentsInCrowdedCourses(2);
+            crowdedCourses.forEach(s -> System.out.println("- " + s.getName()));
+
 
             tx.commit(); // commit unique pour tout le bloc
             logger.info("💾 Toutes les opérations effectuées avec succès");

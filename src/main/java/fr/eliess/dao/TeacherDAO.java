@@ -74,6 +74,24 @@ public class TeacherDAO extends GenericDAO<Teacher> {
         return em.createQuery(cq).getResultList();
     }
 
+    // Sous-requête avec EXISTS
+    public List<Teacher> findTeachersWithoutCourses() {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Teacher> cq = cb.createQuery(Teacher.class);
+        Root<Teacher> teacher = cq.from(Teacher.class);
+
+        // Sous-requête : existe-t-il un cours lié à ce prof ?
+        Subquery<Course> subquery = cq.subquery(Course.class);
+        Root<Course> course = subquery.from(Course.class);
+        subquery.select(course)
+                .where(cb.equal(course.get("teacher"), teacher));
+
+        // Condition : NOT EXISTS
+        cq.select(teacher).where(cb.not(cb.exists(subquery)));
+
+        return em.createQuery(cq).getResultList();
+    }
+
     /*
 
     Ici :
